@@ -1,6 +1,6 @@
 # @koredotcom/agents-mcp-tools
 
-MCP tools for [Claude Code](https://claude.com/claude-code) to debug, manage, and interact with the [Kore.ai Agent Platform](https://agents.kore.ai).
+MCP tools for AI Agents to debug, manage, and interact with the [Kore.ai Agent Platform](https://agents.kore.ai).
 
 ## Install
 
