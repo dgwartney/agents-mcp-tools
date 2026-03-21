@@ -12,9 +12,20 @@ vi.mock('../client/credentials.js', () => ({
   readStoredCredentials: vi.fn(),
   hasValidToken: vi.fn(),
   hasRefreshToken: vi.fn(),
+  writeStoredCredentials: vi.fn(),
 }));
 
-import { readStoredCredentials, hasValidToken, hasRefreshToken } from '../client/credentials.js';
+// Mock child_process.execFile so we don't actually open a browser
+vi.mock('node:child_process', () => ({
+  execFile: vi.fn(),
+}));
+
+import {
+  readStoredCredentials,
+  hasValidToken,
+  hasRefreshToken,
+  writeStoredCredentials,
+} from '../client/credentials.js';
 
 const originalFetch = globalThis.fetch;
 
@@ -47,10 +58,15 @@ function deviceAuthInitResponse(overrides?: Record<string, unknown>) {
   };
 }
 
-/** Standard successful token response */
+/** Standard successful token response — includes a valid JWT payload for persistence */
+const TEST_JWT_PAYLOAD = Buffer.from(
+  JSON.stringify({ sub: 'u-1', email: 'test@kore.com', exp: 9999999999 }),
+).toString('base64url');
+const TEST_JWT = `eyJ.${TEST_JWT_PAYLOAD}.sig`;
+
 function deviceTokenResponse(overrides?: Record<string, unknown>) {
   return {
-    access_token: 'device-jwt',
+    access_token: TEST_JWT,
     refresh_token: 'device-refresh',
     expires_in: 86400,
     ...overrides,
@@ -154,7 +170,7 @@ describe('authenticate', () => {
       );
     });
 
-    test('falls through to device auth initiation when expired and no refresh token', async () => {
+    test('falls through to device auth when expired and no refresh token', async () => {
       const { httpClient, wsClient } = createMockClients();
       vi.mocked(readStoredCredentials).mockReturnValue({
         token: 'expired-jwt',
@@ -166,9 +182,9 @@ describe('authenticate', () => {
       globalThis.fetch = mockDeviceAuthFetch();
 
       const result = await authenticate(httpClient, wsClient);
-      expect(result.method).toBe('device_auth_pending');
-      expect(result.deviceCode).toBe('dc-123');
-      expect(result.verificationUrl).toContain('/auth/device?code=ABCD-1234');
+      // Single-call flow: completes with device_auth, not device_auth_pending
+      expect(result.method).toBe('device_auth');
+      expect(result.token).toBe(TEST_JWT);
     });
 
     test('skipped when skipStoredCredentials is true', async () => {
@@ -182,7 +198,8 @@ describe('authenticate', () => {
 
       const result = await authenticate(httpClient, wsClient, { skipStoredCredentials: true });
       expect(readStoredCredentials).not.toHaveBeenCalled();
-      expect(result.method).toBe('device_auth_pending');
+      // Single-call flow: completes fully
+      expect(result.method).toBe('device_auth');
     });
   });
 
@@ -191,37 +208,48 @@ describe('authenticate', () => {
   // =========================================================================
 
   describe('device auth', () => {
-    test('returns device_auth_pending with verification URL on first call (no deviceCode)', async () => {
+    test('single-call flow: initiates, polls, and completes (no deviceCode needed)', async () => {
       const { httpClient, wsClient } = createMockClients();
       globalThis.fetch = mockDeviceAuthFetch();
 
       const result = await authenticate(httpClient, wsClient);
-      expect(result).toMatchObject({
-        method: 'device_auth_pending',
-        token: '',
-        deviceCode: 'dc-123',
-        userCode: 'ABCD-1234',
-      });
-      expect(result.verificationUrl).toContain('/auth/device?code=ABCD-1234');
-      expect(result.message).toContain('Authorization required');
-      // Should NOT have set tokens on clients (auth not complete)
-      expect(httpClient.setAuthToken).not.toHaveBeenCalled();
-      expect(wsClient.setAuthToken).not.toHaveBeenCalled();
+
+      // Completes in one call — no device_auth_pending
+      expect(result).toMatchObject({ method: 'device_auth', token: TEST_JWT });
+      expect(httpClient.setAuthToken).toHaveBeenCalledWith(TEST_JWT);
+      expect(wsClient.setAuthToken).toHaveBeenCalledWith(TEST_JWT);
     });
 
-    test('completes device auth when deviceCode is provided (second call)', async () => {
+    test('persists credentials after successful device auth', async () => {
+      const { httpClient, wsClient } = createMockClients();
+      globalThis.fetch = mockDeviceAuthFetch();
+
+      await authenticate(httpClient, wsClient);
+
+      expect(writeStoredCredentials).toHaveBeenCalledWith(
+        expect.objectContaining({
+          token: TEST_JWT,
+          email: 'test@kore.com',
+        }),
+      );
+    });
+
+    test('completes device auth when deviceCode is provided (resumed flow)', async () => {
       const { httpClient, wsClient } = createMockClients();
       globalThis.fetch = vi.fn().mockImplementation((url: string) => {
         if (url.includes('/device/token')) {
-          return Promise.resolve({ ok: true, json: () => Promise.resolve(deviceTokenResponse()) });
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(deviceTokenResponse()),
+          });
         }
         return Promise.resolve({ ok: false, status: 404 });
       });
 
       const result = await authenticate(httpClient, wsClient, { deviceCode: 'dc-123' });
-      expect(result).toMatchObject({ method: 'device_auth', token: 'device-jwt' });
-      expect(httpClient.setAuthToken).toHaveBeenCalledWith('device-jwt');
-      expect(wsClient.setAuthToken).toHaveBeenCalledWith('device-jwt');
+      expect(result).toMatchObject({ method: 'device_auth', token: TEST_JWT });
+      expect(httpClient.setAuthToken).toHaveBeenCalledWith(TEST_JWT);
+      expect(wsClient.setAuthToken).toHaveBeenCalledWith(TEST_JWT);
     });
 
     test('throws DeviceAuthError when initiation fails', async () => {
@@ -292,8 +320,54 @@ describe('authenticate', () => {
       await vi.advanceTimersByTimeAsync(3_000);
 
       const result = await authPromise;
-      expect(result).toMatchObject({ method: 'device_auth', token: 'device-jwt' });
+      expect(result).toMatchObject({ method: 'device_auth', token: TEST_JWT });
       expect(pollCount).toBe(3);
+
+      vi.useRealTimers();
+    });
+
+    test('single-call flow polls after initiation', async () => {
+      vi.useFakeTimers();
+      const { httpClient, wsClient } = createMockClients();
+      let pollCount = 0;
+
+      globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+        // Initiation endpoint
+        if (url.includes('/api/auth/device') && !url.includes('/token')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(deviceAuthInitResponse({ expires_in: 30 })),
+          });
+        }
+        // Token polling endpoint
+        if (url.includes('/device/token')) {
+          pollCount++;
+          if (pollCount < 2) {
+            return Promise.resolve({
+              ok: false,
+              status: 428,
+              json: () => Promise.resolve({ error: 'authorization_pending' }),
+            });
+          }
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(deviceTokenResponse()),
+          });
+        }
+        return Promise.resolve({ ok: false, status: 404 });
+      });
+
+      const authPromise = authenticate(httpClient, wsClient);
+
+      // Advance through poll cycles
+      await vi.advanceTimersByTimeAsync(3_000);
+      await vi.advanceTimersByTimeAsync(3_000);
+
+      const result = await authPromise;
+      expect(result.method).toBe('device_auth');
+      expect(pollCount).toBe(2);
+      // Credentials should be persisted
+      expect(writeStoredCredentials).toHaveBeenCalled();
 
       vi.useRealTimers();
     });

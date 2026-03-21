@@ -70,8 +70,10 @@ export const tools: ToolDefinition[] = [
     description:
       'Connect to the server WebSocket to start receiving traces. Call this first before using other debug tools. ' +
       'Auth is automatic — stored credentials or device auth are tried in order. ' +
-      'If device auth is needed, returns a verification URL and deviceCode. Show the URL to the user. ' +
-      'After they approve in the browser, call platform_connect again with the same serverUrl and the deviceCode to complete authentication. ' +
+      'If device auth is needed, the browser opens automatically and the tool polls until approved (single call, no two-phase). ' +
+      'Credentials are saved to ~/.config/kore-platform/credentials.json for future sessions. ' +
+      'If already connected and a new authToken is provided, the token is refreshed without dropping the WebSocket. ' +
+      'Use force=true to fully disconnect and reconnect (e.g. when credentials have expired). ' +
       'If it fails, report the error as-is to the user. Do NOT try alternative approaches like REST calls.',
     schema: connectSchema,
     handler: connect as (args: unknown, ctx: DebugContext) => Promise<string>,

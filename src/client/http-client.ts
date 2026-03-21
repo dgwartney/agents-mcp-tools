@@ -66,15 +66,11 @@ export class HttpClient {
   /**
    * Get agent details
    */
-  async getAgent(domain: string, name: string): Promise<AgentDetails | null> {
-    const safeDomain = encodeURIComponent(domain);
+  async getAgent(_domain: string, name: string): Promise<AgentDetails | null> {
     const safeName = encodeURIComponent(name);
-    const response = await fetchWithTimeout(
-      `${this.baseUrl}/api/agents/${safeDomain}/${safeName}`,
-      {
-        headers: this.getHeaders(),
-      },
-    );
+    const response = await fetchWithTimeout(`${this.baseUrl}/api/agents/${safeName}`, {
+      headers: this.getHeaders(),
+    });
     if (response.status === 404) {
       return null;
     }

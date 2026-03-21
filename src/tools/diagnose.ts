@@ -114,7 +114,13 @@ const STATUS_ICON: Record<string, string> = {
 
 export async function diagnose(args: DiagnoseArgs, ctx: DebugContext): Promise<string> {
   const { sessionId, agentName, depth = 'standard', configOnly = false } = args;
-  const projectId = args.projectId || 'default';
+  const projectId = args.projectId;
+  if (!projectId) {
+    return JSON.stringify({
+      success: false,
+      error: 'projectId is required. Provide the project ID to run diagnostics.',
+    });
+  }
 
   if (!sessionId && !agentName) {
     return JSON.stringify({

@@ -5,12 +5,21 @@
  *   1. Explicit token (if provided)
  *   2. Stored credentials (~/.config/kore-platform/credentials)
  *   3. Device authorization flow (RFC 8628)
+ *      - Auto-launches browser
+ *      - Polls in a single call (no two-phase handshake)
+ *      - Persists credentials on success
  */
 
 import type { HttpClient } from './http-client.js';
 import type { WebSocketClient } from './websocket-client.js';
-import { readStoredCredentials, hasValidToken, hasRefreshToken } from './credentials.js';
+import {
+  readStoredCredentials,
+  hasValidToken,
+  hasRefreshToken,
+  writeStoredCredentials,
+} from './credentials.js';
 import { fetchWithTimeout } from '../utils/fetch.js';
+import { execFile } from 'node:child_process';
 
 export interface AuthResult {
   token: string;
@@ -66,19 +75,21 @@ export async function authenticate(
     if (result) return result;
   }
 
-  // 3. Device auth — if deviceCode provided, poll for completion; otherwise initiate only
+  // 3. Device auth — if deviceCode provided, poll for completion; otherwise full flow
   if (options.deviceCode) {
-    return await pollDeviceAuth(
+    const result = await pollDeviceAuth(
       httpClient,
       wsClient,
       baseUrl,
       options.deviceCode,
       options.pollTimeoutMs,
     );
+    await persistTokenIfPossible(result, baseUrl);
+    return result;
   }
 
-  // Initiate device auth and return immediately with the URL (no polling)
-  return await initiateDeviceAuth(baseUrl);
+  // Full device auth: initiate → open browser → poll → persist
+  return await deviceAuthFlow(httpClient, wsClient, baseUrl, options.pollTimeoutMs);
 }
 
 /**
@@ -118,7 +129,7 @@ async function tryStoredCredentials(
       } catch (err) {
         console.error(
           '[MCP Debug] Token refresh failed:',
-          err instanceof Error ? err.message : err,
+          err instanceof Error ? err.message : String(err),
         );
         // Refresh failed, fall through to device auth
       }
@@ -126,7 +137,7 @@ async function tryStoredCredentials(
   } catch (err) {
     console.error(
       '[MCP Debug] Credential reading failed:',
-      err instanceof Error ? err.message : err,
+      err instanceof Error ? err.message : String(err),
     );
     // Credential reading failed, fall through to device auth
   }
@@ -135,10 +146,58 @@ async function tryStoredCredentials(
 }
 
 /**
- * Initiate device authorization (RFC 8628) and return immediately.
- * Does NOT poll — returns the verification URL for the MCP client to show to the user.
+ * Open a URL in the user's default browser.
+ * Uses execFile (not exec) to avoid shell injection from server-provided URLs.
+ * Best-effort — never throws.
  */
-async function initiateDeviceAuth(baseUrl: string): Promise<AuthResult> {
+function openBrowser(url: string): void {
+  // Validate URL before launching to reject non-URL strings
+  try {
+    new URL(url);
+  } catch {
+    console.error(`[MCP Debug] Invalid verification URL, skipping browser launch: ${url}`);
+    return;
+  }
+
+  const platform = process.platform;
+  let cmd: string;
+  let args: string[];
+
+  if (platform === 'darwin') {
+    cmd = 'open';
+    args = [url];
+  } else if (platform === 'win32') {
+    cmd = 'cmd';
+    args = ['/c', 'start', '', url];
+  } else {
+    cmd = 'xdg-open';
+    args = [url];
+  }
+
+  try {
+    execFile(cmd, args, (err) => {
+      if (err) {
+        console.error(`[MCP Debug] Could not open browser: ${err.message}`);
+      }
+    });
+  } catch (err) {
+    console.error(
+      `[MCP Debug] Browser launch failed: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+}
+
+/**
+ * Full device auth flow: initiate → open browser → poll → persist credentials.
+ * Single call — no two-phase handshake needed.
+ */
+async function deviceAuthFlow(
+  httpClient: HttpClient,
+  wsClient: WebSocketClient,
+  baseUrl: string,
+  pollTimeoutMs?: number,
+): Promise<AuthResult> {
+  // 1. Initiate
   const initResponse = await fetchWithTimeout(`${baseUrl}/api/auth/device`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -162,25 +221,66 @@ async function initiateDeviceAuth(baseUrl: string): Promise<AuthResult> {
     interval: number;
   };
 
-  const authMessage =
-    `Authorization required. Please visit this URL to approve:\n\n` +
-    `   ${deviceAuth.verification_uri_complete}\n\n` +
-    `   Or enter code: ${deviceAuth.user_code}\n\n` +
-    `After approving, call platform_connect again with the same serverUrl and deviceCode to complete authentication.`;
+  console.error(
+    `[MCP Debug] Device auth initiated. Opening browser: ${deviceAuth.verification_uri_complete}`,
+  );
 
-  console.error(`[MCP Debug] Device auth initiated: ${deviceAuth.verification_uri_complete}`);
+  // 2. Auto-open browser
+  openBrowser(deviceAuth.verification_uri_complete);
 
-  return {
-    token: '',
-    method: 'device_auth_pending',
-    message: authMessage,
-    deviceCode: deviceAuth.device_code,
-    verificationUrl: deviceAuth.verification_uri_complete,
-    userCode: deviceAuth.user_code,
-  };
+  // 3. Poll for approval (blocks until approved or timeout)
+  // Clamp server-provided expires_in to DEFAULT_POLL_TIMEOUT_MS to avoid unbounded waits
+  const serverTimeoutMs = deviceAuth.expires_in * 1000;
+  const effectiveTimeout = pollTimeoutMs ?? Math.min(serverTimeoutMs, DEFAULT_POLL_TIMEOUT_MS);
+  const result = await pollDeviceAuth(
+    httpClient,
+    wsClient,
+    baseUrl,
+    deviceAuth.device_code,
+    effectiveTimeout,
+  );
+
+  // 4. Enrich the result message
+  result.message = 'Authenticated via device authorization. Browser login successful.';
+
+  // 5. Persist credentials
+  await persistTokenIfPossible(result, baseUrl);
+
+  return result;
 }
 
-const DEFAULT_POLL_TIMEOUT_MS = 60_000; // 60 seconds
+/**
+ * Persist auth token to ~/.config/kore-platform/credentials.json.
+ * Best-effort — failures are logged but do not break the auth flow.
+ */
+async function persistTokenIfPossible(result: AuthResult, _baseUrl: string): Promise<void> {
+  if (!result.token || result.method === 'device_auth_pending') return;
+
+  try {
+    // Decode JWT to extract expiry (without verifying — we just signed it)
+    const payload = JSON.parse(Buffer.from(result.token.split('.')[1], 'base64url').toString()) as {
+      exp?: number;
+      email?: string;
+    };
+    const expiresAt = payload.exp
+      ? new Date(payload.exp * 1000).toISOString()
+      : new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+    writeStoredCredentials({
+      token: result.token,
+      expiresAt,
+      email: payload.email,
+    });
+    console.error('[MCP Debug] Credentials saved to ~/.config/kore-platform/credentials.json');
+  } catch (err) {
+    console.error(
+      '[MCP Debug] Failed to persist credentials:',
+      err instanceof Error ? err.message : String(err),
+    );
+  }
+}
+
+const DEFAULT_POLL_TIMEOUT_MS = 300_000; // 5 minutes — generous for login + approve
 
 /**
  * Poll for device auth completion. Called on the second platform_connect call
@@ -245,7 +345,7 @@ async function pollDeviceAuth(
       );
     } catch (e) {
       if (e instanceof DeviceAuthError) throw e;
-      console.error('[MCP Debug] Token polling error:', e instanceof Error ? e.message : e);
+      console.error('[MCP Debug] Token polling error:', e instanceof Error ? e.message : String(e));
       await sleep(pollInterval);
       continue;
     }

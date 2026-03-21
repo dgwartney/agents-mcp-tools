@@ -20,13 +20,19 @@ export const connectSchema = z.object({
     .string()
     .optional()
     .describe(
-      'JWT auth token. If not provided, authentication is automatic (stored credentials → device auth).',
+      'JWT auth token. If not provided, authentication is automatic (stored credentials → device auth with browser launch).',
     ),
   deviceCode: z
     .string()
     .optional()
     .describe(
-      'Device code from a previous auth initiation. Pass this to complete device auth after browser approval.',
+      'Deprecated. Device auth now auto-polls in a single call. Only needed if resuming a previously interrupted flow.',
+    ),
+  force: z
+    .boolean()
+    .optional()
+    .describe(
+      'Force reconnection even if already connected. Use when the auth token has expired or you need to re-authenticate.',
     ),
   // Deprecated — kept for backward compatibility
   wsUrl: z
@@ -52,7 +58,7 @@ function connectError(error: string, extra?: Record<string, unknown>): string {
 }
 
 export async function connect(args: ConnectArgs, ctx: DebugContext): Promise<string> {
-  const { serverUrl, wsUrl, httpUrl, authToken, deviceCode } = args;
+  const { serverUrl, wsUrl, httpUrl, authToken, deviceCode, force } = args;
 
   // Resolve URLs: serverUrl takes precedence, then individual (deprecated), then env defaults
   if (serverUrl) {
@@ -64,13 +70,28 @@ export async function connect(args: ConnectArgs, ctx: DebugContext): Promise<str
     if (httpUrl) ctx.httpClient.setBaseUrl(httpUrl);
   }
 
-  // Check if already connected
+  // If already connected: allow token refresh without full reconnect, or force full reconnect
   if (ctx.wsClient.isConnected()) {
-    return connectSuccess({
-      status: 'already_connected',
-      serverUrl: ctx.httpClient.getBaseUrl(),
-      wsUrl: ctx.wsClient.getUrl(),
-    });
+    if (authToken && !force) {
+      // New token provided — update both clients without dropping WebSocket
+      ctx.httpClient.setAuthToken(authToken);
+      ctx.wsClient.setAuthToken(authToken);
+      return connectSuccess({
+        status: 'token_refreshed',
+        serverUrl: ctx.httpClient.getBaseUrl(),
+        wsUrl: ctx.wsClient.getUrl(),
+        message: 'Auth token updated on existing connection.',
+      });
+    }
+    if (!force) {
+      return connectSuccess({
+        status: 'already_connected',
+        serverUrl: ctx.httpClient.getBaseUrl(),
+        wsUrl: ctx.wsClient.getUrl(),
+      });
+    }
+    // force=true — disconnect and fall through to full reconnect
+    ctx.wsClient.disconnect();
   }
 
   const resolvedUrl = ctx.httpClient.getBaseUrl();
@@ -99,24 +120,9 @@ export async function connect(args: ConnectArgs, ctx: DebugContext): Promise<str
     }
   }
 
-  // Authenticate using cascade
+  // Authenticate using cascade (device auth now auto-opens browser and polls in one call)
   try {
     const authResult = await ctx.authenticate({ authToken, deviceCode });
-
-    // If device auth was initiated but not yet approved, return the URL for the user
-    if (authResult.method === 'device_auth_pending') {
-      return connectSuccess({
-        status: 'device_auth_required',
-        serverUrl: resolvedUrl,
-        message: authResult.message,
-        deviceCode: authResult.deviceCode,
-        verificationUrl: authResult.verificationUrl,
-        userCode: authResult.userCode,
-        instructions:
-          'Show the verification URL to the user and ask them to approve in their browser. ' +
-          'Then call platform_connect again with the same serverUrl and the deviceCode returned here.',
-      });
-    }
 
     // Connect to WebSocket
     try {

@@ -13,10 +13,13 @@ function createMockContext(overrides?: Partial<DebugContext>): DebugContext {
       setUrl: vi.fn(),
       getUrl: vi.fn().mockReturnValue('ws://localhost:3112/ws'),
       connect: vi.fn().mockResolvedValue(undefined),
+      disconnect: vi.fn(),
+      setAuthToken: vi.fn(),
     } as any,
     httpClient: {
       setBaseUrl: vi.fn(),
       getBaseUrl: vi.fn().mockReturnValue('http://localhost:3112'),
+      setAuthToken: vi.fn(),
       runtimeHealthCheck: vi.fn().mockResolvedValue({ reachable: true, status: 200 }),
     } as any,
     sessionStore: {} as any,
@@ -82,6 +85,50 @@ describe('connect tool', () => {
       // Should NOT try health check or auth
       expect(ctx.httpClient.runtimeHealthCheck).not.toHaveBeenCalled();
       expect(ctx.authenticate).not.toHaveBeenCalled();
+    });
+
+    test('refreshes token on both clients without reconnecting when new authToken provided', async () => {
+      const ctx = createMockContext();
+      vi.mocked(ctx.wsClient.isConnected).mockReturnValue(true);
+
+      const raw = await connect({ authToken: 'new-jwt-token' }, ctx);
+      const result = JSON.parse(raw);
+
+      expect(result.success).toBe(true);
+      expect(result.status).toBe('token_refreshed');
+      expect(ctx.httpClient.setAuthToken).toHaveBeenCalledWith('new-jwt-token');
+      expect(ctx.wsClient.setAuthToken).toHaveBeenCalledWith('new-jwt-token');
+      // Should NOT disconnect or re-authenticate
+      expect(ctx.wsClient.disconnect).not.toHaveBeenCalled();
+      expect(ctx.authenticate).not.toHaveBeenCalled();
+    });
+
+    test('force=true disconnects and fully reconnects', async () => {
+      const ctx = createMockContext();
+      // First call: connected. After disconnect: not connected.
+      vi.mocked(ctx.wsClient.isConnected).mockReturnValueOnce(true).mockReturnValue(false);
+
+      const raw = await connect({ force: true }, ctx);
+      const result = JSON.parse(raw);
+
+      expect(result.success).toBe(true);
+      expect(result.status).toBe('connected');
+      expect(ctx.wsClient.disconnect).toHaveBeenCalled();
+      expect(ctx.authenticate).toHaveBeenCalled();
+      expect(ctx.wsClient.connect).toHaveBeenCalled();
+    });
+
+    test('force=true with authToken disconnects and re-authenticates with new token', async () => {
+      const ctx = createMockContext();
+      vi.mocked(ctx.wsClient.isConnected).mockReturnValueOnce(true).mockReturnValue(false);
+
+      const raw = await connect({ authToken: 'fresh-jwt', force: true }, ctx);
+      const result = JSON.parse(raw);
+
+      expect(result.success).toBe(true);
+      expect(result.status).toBe('connected');
+      expect(ctx.wsClient.disconnect).toHaveBeenCalled();
+      expect(ctx.authenticate).toHaveBeenCalledWith({ authToken: 'fresh-jwt' });
     });
   });
 

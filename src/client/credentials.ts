@@ -104,6 +104,21 @@ export function readStoredCredentials(): StoredCredentials | null {
 }
 
 /**
+ * Write credentials to ~/.config/kore-platform/credentials.json.
+ * Creates the directory if it doesn't exist.
+ */
+export function writeStoredCredentials(creds: StoredCredentials): void {
+  const credPath = getCredentialsPath();
+  const dir = path.dirname(credPath);
+
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+
+  fs.writeFileSync(credPath, JSON.stringify(creds, null, 2), { mode: 0o600 });
+}
+
+/**
  * Check if stored credentials have a valid (non-expired) access token.
  */
 export function hasValidToken(creds: StoredCredentials): boolean {

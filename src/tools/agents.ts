@@ -29,18 +29,35 @@ export async function listAgents(args: ListAgentsArgs, ctx: DebugContext): Promi
       });
     }
 
-    let agents = response.agents;
+    // Runtime returns a flat array of agents. Group by domain for the MCP response.
+    const rawAgents = Array.isArray(response.agents)
+      ? (response.agents as Array<Record<string, unknown>>)
+      : [];
+
+    // Group by domain (fall back to "default" if agent has no domain)
+    const grouped: Record<string, Array<Record<string, unknown>>> = {};
+    for (const agent of rawAgents) {
+      const domain = (agent.domain as string) || 'default';
+      if (!grouped[domain]) grouped[domain] = [];
+      grouped[domain].push(agent);
+    }
 
     // Filter by domain if specified
     if (args.domain) {
-      agents = { [args.domain]: response.agents[args.domain] || [] };
+      const filtered = grouped[args.domain] || [];
+      return JSON.stringify({
+        success: true,
+        total: filtered.length,
+        domains: [args.domain],
+        agents: { [args.domain]: filtered },
+      });
     }
 
     return JSON.stringify({
       success: true,
-      total: response.total,
-      domains: args.domain ? [args.domain] : response.domains,
-      agents,
+      total: rawAgents.length,
+      domains: Object.keys(grouped),
+      agents: grouped,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';

@@ -162,7 +162,7 @@ export async function platformTools(args: PlatformToolsArgs, ctx: DebugContext):
         const response = await fetchWithTimeout(
           url,
           {
-            method: 'PATCH',
+            method: 'PUT',
             headers,
             body: JSON.stringify(body),
           },
@@ -170,7 +170,7 @@ export async function platformTools(args: PlatformToolsArgs, ctx: DebugContext):
         );
         if (!response.ok) {
           const text = await response.text().catch(() => '');
-          return error(`PATCH ${url} failed: ${response.status} ${response.statusText}`, text);
+          return error(`PUT ${url} failed: ${response.status} ${response.statusText}`, text);
         }
         const data = await response.json();
         return success(data);
