@@ -168,8 +168,7 @@ export const tools: ToolDefinition[] = [
   // Documentation tools
   {
     name: 'debug_docs',
-    description: `Get or search Agent ABL documentation. Provide 'topic' for full content, 'query' to search, or neither to list topics.
-Available topics: overview, scripted, reasoning, supervisor, trace-events, debugging, context.`,
+    description: `Get or search Agent ABL documentation from the platform API (requires platform_connect first). Provide 'topic' for full content, 'query' to search, or neither to list available topics.`,
     schema: docsSchema,
     handler: docs as (args: unknown, ctx: DebugContext) => Promise<string>,
   },

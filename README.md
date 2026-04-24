@@ -73,10 +73,10 @@ Set `AGENTS_URL` in the `env` block, or pass `serverUrl` directly to `platform_c
 
 ### Docs & CI
 
-| Tool                 | Description                     |
-| -------------------- | ------------------------------- |
-| `debug_docs`         | Get or search ABL documentation |
-| `debug_harness_logs` | Get Harness CI execution logs   |
+| Tool                 | Description                                                 |
+| -------------------- | ----------------------------------------------------------- |
+| `debug_docs`         | Get or search ABL documentation (fetched from platform API) |
+| `debug_harness_logs` | Get Harness CI execution logs                               |
 
 ## Authentication
 
