@@ -11,7 +11,7 @@
  *   --help               Show help
  */
 
-import { MCPDebugServer } from '../src/server.js';
+import { MCPDebugServer } from "../src/server.js";
 
 function parseArgs(args: string[]): {
   serverUrl?: string;
@@ -19,18 +19,23 @@ function parseArgs(args: string[]): {
   httpUrl?: string;
   help?: boolean;
 } {
-  const result: { serverUrl?: string; wsUrl?: string; httpUrl?: string; help?: boolean } = {};
+  const result: {
+    serverUrl?: string;
+    wsUrl?: string;
+    httpUrl?: string;
+    help?: boolean;
+  } = {};
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
 
-    if (arg === '--help' || arg === '-h') {
+    if (arg === "--help" || arg === "-h") {
       result.help = true;
-    } else if (arg === '--server-url' && args[i + 1]) {
+    } else if (arg === "--server-url" && args[i + 1]) {
       result.serverUrl = args[++i];
-    } else if (arg === '--ws-url' && args[i + 1]) {
+    } else if (arg === "--ws-url" && args[i + 1]) {
       result.wsUrl = args[++i];
-    } else if (arg === '--http-url' && args[i + 1]) {
+    } else if (arg === "--http-url" && args[i + 1]) {
       result.httpUrl = args[++i];
     }
   }
@@ -64,7 +69,6 @@ Available MCP Tools (24):
   debug_list_agents           List available agents
   debug_load_agent            Load an agent and create debug session
   debug_send_message          Send a message to the agent
-  debug_reset_session         Reset the debug session
   debug_get_current_state     Get current agent state (live)
   debug_traces                Get/search trace events with filters
   debug_get_span_tree         Get hierarchical execution flow
@@ -86,6 +90,7 @@ Available MCP Tools (24):
   platform_tools              Manage tools (list, get, create, update, delete, test)
   platform_import_export      Import/export projects (export_preview, export, import_preview, import)
   platform_config             Manage project config (get_settings, update_settings, get_llm_config, update_llm_config)
+  platform_workspaces         Manage workspaces (list, switch, current)
 
 Claude Code Configuration:
   Add to your project's .mcp.json or ~/.claude/settings.json:
@@ -118,12 +123,12 @@ async function main(): Promise<void> {
   });
 
   // Handle shutdown
-  process.on('SIGINT', async () => {
+  process.on("SIGINT", async () => {
     await server.stop();
     process.exit(0);
   });
 
-  process.on('SIGTERM', async () => {
+  process.on("SIGTERM", async () => {
     await server.stop();
     process.exit(0);
   });
@@ -133,6 +138,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((error) => {
-  console.error('Fatal error:', error);
+  console.error("Fatal error:", error);
   process.exit(1);
 });

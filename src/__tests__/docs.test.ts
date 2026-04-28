@@ -1,29 +1,22 @@
 /**
- * Tests for the documentation module (post-migration)
+ * Tests for the documentation stub.
  *
- * After migration, docs are served by the platform API.
- * The local docs/index.ts module is a stub with no content.
+ * Docs are served by the Studio API — the MCP package has no embedded content.
+ * These tests verify the stub exports compile and return empty values.
  */
-import { describe, test, expect } from 'vitest';
-import { ABL_DOCS, DOC_TOPICS, getDocumentation, searchDocumentation } from '../docs/index.js';
+import { describe, test, expect } from "vitest";
+import { ABL_DOCS, DOC_TOPICS, searchDocumentation } from "../docs/index.js";
 
-describe('Documentation Stub (content moved to platform API)', () => {
-  test('ABL_DOCS should be empty — content is served by the platform', () => {
-    expect(Object.keys(ABL_DOCS)).toHaveLength(0);
+describe("Documentation Stub", () => {
+  test("ABL_DOCS is empty (docs are API-only)", () => {
+    expect(ABL_DOCS).toEqual({});
   });
 
-  test('DOC_TOPICS should be empty — topics are fetched from the platform', () => {
-    expect(DOC_TOPICS).toHaveLength(0);
+  test("DOC_TOPICS is empty", () => {
+    expect(DOC_TOPICS).toEqual([]);
   });
 
-  test('getDocumentation should return null for any topic', () => {
-    expect(getDocumentation('overview')).toBeNull();
-    expect(getDocumentation('scripted')).toBeNull();
-    expect(getDocumentation('nonexistent')).toBeNull();
-  });
-
-  test('searchDocumentation should return empty array', () => {
-    expect(searchDocumentation('agent')).toHaveLength(0);
-    expect(searchDocumentation('anything')).toHaveLength(0);
+  test("searchDocumentation returns empty array", () => {
+    expect(searchDocumentation("anything")).toEqual([]);
   });
 });

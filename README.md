@@ -51,6 +51,7 @@ Set `AGENTS_URL` in the `env` block, or pass `serverUrl` directly to `platform_c
 | `platform_tools`         | Manage tools (list, get, create, update, delete, test)   |
 | `platform_import_export` | Import/export projects                                   |
 | `platform_config`        | Manage project and LLM configuration                     |
+| `platform_workspaces`    | Manage and switch workspaces                             |
 
 ### Debug
 
@@ -59,7 +60,6 @@ Set `AGENTS_URL` in the `env` block, or pass `serverUrl` directly to `platform_c
 | `debug_list_agents`          | List available agents by domain                    |
 | `debug_load_agent`           | Load an agent and create a debug session           |
 | `debug_send_message`         | Send a message to an agent                         |
-| `debug_reset_session`        | Reset session (clear history)                      |
 | `debug_get_current_state`    | Inspect agent context, gather progress, flow state |
 | `debug_traces`               | Search trace events (type, text, agent, error)     |
 | `debug_get_span_tree`        | View hierarchical execution flow                   |
@@ -73,10 +73,10 @@ Set `AGENTS_URL` in the `env` block, or pass `serverUrl` directly to `platform_c
 
 ### Docs & CI
 
-| Tool                 | Description                                                 |
-| -------------------- | ----------------------------------------------------------- |
-| `debug_docs`         | Get or search ABL documentation (fetched from platform API) |
-| `debug_harness_logs` | Get Harness CI execution logs                               |
+| Tool                 | Description                     |
+| -------------------- | ------------------------------- |
+| `debug_docs`         | Get or search ABL documentation |
+| `debug_harness_logs` | Get Harness CI execution logs   |
 
 ## Authentication
 

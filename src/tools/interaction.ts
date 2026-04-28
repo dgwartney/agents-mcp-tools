@@ -2,30 +2,39 @@
  * Interaction Tools
  *
  * debug_send_message - Send a message to the agent
- * debug_reset_session - Reset the debug session
  */
 
-import { z } from 'zod';
-import type { DebugContext } from './index.js';
+import { z } from "zod";
+import type { DebugContext } from "./index.js";
 
 // =============================================================================
 // debug_send_message
 // =============================================================================
 
 export const sendMessageSchema = z.object({
-  text: z.string().describe('Message text to send to the agent'),
-  sessionId: z.string().optional().describe('Session ID (uses active session if not specified)'),
+  text: z.string().describe("Message text to send to the agent"),
+  sessionId: z
+    .string()
+    .optional()
+    .describe("Session ID (uses active session if not specified)"),
   waitForResponse: z
     .boolean()
     .optional()
     .default(true)
-    .describe('Wait for agent response before returning'),
-  timeout: z.number().optional().default(60000).describe('Timeout in ms when waiting for response'),
+    .describe("Wait for agent response before returning"),
+  timeout: z
+    .number()
+    .optional()
+    .default(60000)
+    .describe("Timeout in ms when waiting for response"),
 });
 
 export type SendMessageArgs = z.infer<typeof sendMessageSchema>;
 
-export async function sendMessage(args: SendMessageArgs, ctx: DebugContext): Promise<string> {
+export async function sendMessage(
+  args: SendMessageArgs,
+  ctx: DebugContext,
+): Promise<string> {
   const { text, waitForResponse = true, timeout = 60000 } = args;
 
   // Use active session if not specified
@@ -35,7 +44,7 @@ export async function sendMessage(args: SendMessageArgs, ctx: DebugContext): Pro
     return JSON.stringify({
       success: false,
       error:
-        'No session specified and no active session. Load an agent first with debug_load_agent.',
+        "No session specified and no active session. Load an agent first with debug_load_agent.",
     });
   }
 
@@ -43,7 +52,7 @@ export async function sendMessage(args: SendMessageArgs, ctx: DebugContext): Pro
   if (!ctx.wsClient.isConnected()) {
     return JSON.stringify({
       success: false,
-      error: 'Not connected to server. Call platform_connect first.',
+      error: "Not connected to server. Call platform_connect first.",
     });
   }
 
@@ -56,7 +65,7 @@ export async function sendMessage(args: SendMessageArgs, ctx: DebugContext): Pro
     return JSON.stringify({
       success: true,
       sessionId,
-      message: 'Message sent (not waiting for response)',
+      message: "Message sent (not waiting for response)",
       sentText: text,
     });
   }
@@ -64,8 +73,8 @@ export async function sendMessage(args: SendMessageArgs, ctx: DebugContext): Pro
   // Wait for response
   return new Promise((resolve) => {
     let resolved = false;
-    let responseText = '';
-    let currentMessageId = '';
+    let responseText = "";
+    let currentMessageId = "";
     const chunks: string[] = [];
 
     const timeoutId = setTimeout(() => {
@@ -75,8 +84,8 @@ export async function sendMessage(args: SendMessageArgs, ctx: DebugContext): Pro
         resolve(
           JSON.stringify({
             success: false,
-            error: 'Timeout waiting for response',
-            partialResponse: chunks.join(''),
+            error: "Timeout waiting for response",
+            partialResponse: chunks.join(""),
           }),
         );
       }
@@ -149,80 +158,5 @@ export async function sendMessage(args: SendMessageArgs, ctx: DebugContext): Pro
 
     // Send the message
     ctx.wsClient.sendMessage(sessionId, text);
-  });
-}
-
-// =============================================================================
-// debug_reset_session
-// =============================================================================
-
-export const resetSessionSchema = z.object({
-  sessionId: z.string().optional().describe('Session ID (uses active session if not specified)'),
-});
-
-export type ResetSessionArgs = z.infer<typeof resetSessionSchema>;
-
-export async function resetSession(args: ResetSessionArgs, ctx: DebugContext): Promise<string> {
-  // Use active session if not specified
-  const sessionId = args.sessionId || ctx.sessionStore.getActiveSessionId();
-
-  if (!sessionId) {
-    return JSON.stringify({
-      success: false,
-      error: 'No session specified and no active session. Load an agent first.',
-    });
-  }
-
-  // Ensure connected
-  if (!ctx.wsClient.isConnected()) {
-    return JSON.stringify({
-      success: false,
-      error: 'Not connected to server. Call platform_connect first.',
-    });
-  }
-
-  return new Promise((resolve) => {
-    let resolved = false;
-
-    const timeout = setTimeout(() => {
-      if (!resolved) {
-        resolved = true;
-        resolve(
-          JSON.stringify({
-            success: false,
-            error: 'Timeout waiting for session reset confirmation',
-          }),
-        );
-      }
-    }, 10000);
-
-    // Set up one-time handler
-    const originalOnSessionReset = ctx.wsClient.onSessionReset;
-
-    ctx.wsClient.onSessionReset = (msgSessionId) => {
-      if (msgSessionId === sessionId) {
-        // Restore original handler
-        ctx.wsClient.onSessionReset = originalOnSessionReset;
-
-        // Clear session traces
-        ctx.traceStore.clearSession(sessionId);
-
-        clearTimeout(timeout);
-        if (!resolved) {
-          resolved = true;
-          resolve(
-            JSON.stringify({
-              success: true,
-              sessionId,
-              message: 'Session reset successfully. Trace events cleared.',
-            }),
-          );
-        }
-      }
-      originalOnSessionReset?.(msgSessionId);
-    };
-
-    // Send reset request
-    ctx.wsClient.resetSession(sessionId);
   });
 }
