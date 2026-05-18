@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 type MockSocketInstance = {
   url: string;
@@ -8,7 +8,7 @@ type MockSocketInstance = {
 
 const websocketInstances = vi.hoisted(() => [] as MockSocketInstance[]);
 
-vi.mock("ws", () => {
+vi.mock('ws', () => {
   class MockWebSocket {
     static readonly OPEN = 1;
 
@@ -38,7 +38,7 @@ vi.mock("ws", () => {
     }
 
     emit(event: string, ...args: unknown[]): void {
-      if (event === "open") {
+      if (event === 'open') {
         this.readyState = MockWebSocket.OPEN;
       }
       for (const handler of this.listeners.get(event) ?? []) {
@@ -52,32 +52,32 @@ vi.mock("ws", () => {
   };
 });
 
-import { WebSocketClient } from "../client/websocket-client.js";
+import { WebSocketClient } from '../client/websocket-client.js';
 
-describe("WebSocketClient", () => {
+describe('WebSocketClient', () => {
   beforeEach(() => {
     websocketInstances.length = 0;
   });
 
-  test("uses the web-debug subprotocol transport when an auth token is present", async () => {
-    const client = new WebSocketClient({ url: "ws://localhost:3112/ws" });
-    client.setAuthToken("jwt-token");
+  test('uses the web-debug subprotocol transport when an auth token is present', async () => {
+    const client = new WebSocketClient({ url: 'ws://localhost:3112/ws' });
+    client.setAuthToken('jwt-token');
 
     const connectPromise = client.connect();
     const ws = websocketInstances.at(-1);
 
-    expect(ws?.url).toBe("ws://localhost:3112/ws");
-    expect(ws?.protocols).toEqual(["web-debug-auth", "jwt-token"]);
+    expect(ws?.url).toBe('ws://localhost:3112/ws');
+    expect(ws?.protocols).toEqual(['web-debug-auth', 'jwt-token']);
 
-    ws?.emit("open");
+    ws?.emit('open');
     await expect(connectPromise).resolves.toBeUndefined();
   });
 
-  test("rejects internal websocket connections when no auth token is configured", async () => {
-    const client = new WebSocketClient({ url: "ws://localhost:3112/ws" });
+  test('rejects internal websocket connections when no auth token is configured', async () => {
+    const client = new WebSocketClient({ url: 'ws://localhost:3112/ws' });
 
     await expect(client.connect()).rejects.toThrow(
-      "Internal runtime WebSocket connections require setAuthToken() before connect().",
+      'Internal runtime WebSocket connections require setAuthToken() before connect().',
     );
     expect(websocketInstances).toHaveLength(0);
   });

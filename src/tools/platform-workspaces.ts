@@ -13,20 +13,17 @@
  * runtime, so this tool rewrites the base URL to the Studio origin.
  */
 
-import { z } from "zod";
-import type { DebugContext } from "./index.js";
-import { fetchWithTimeout } from "../utils/fetch.js";
+import { z } from 'zod';
+import type { DebugContext } from './index.js';
+import { fetchWithTimeout } from '../utils/fetch.js';
 
 // =============================================================================
 // SCHEMA
 // =============================================================================
 
 export const platformWorkspacesSchema = z.object({
-  action: z.enum(["list", "switch", "current"]),
-  tenantId: z
-    .string()
-    .optional()
-    .describe("Tenant ID to switch to (required for switch)"),
+  action: z.enum(['list', 'switch', 'current']),
+  tenantId: z.string().optional().describe('Tenant ID to switch to (required for switch)'),
 });
 
 type PlatformWorkspacesArgs = z.infer<typeof platformWorkspacesSchema>;
@@ -44,7 +41,7 @@ const DEFAULT_STUDIO_PORT = 5173;
 function deriveStudioUrl(runtimeBaseUrl: string): string {
   try {
     const url = new URL(runtimeBaseUrl);
-    if (url.port && url.port !== "443" && url.port !== "80") {
+    if (url.port && url.port !== '443' && url.port !== '80') {
       url.port = String(DEFAULT_STUDIO_PORT);
     }
     return url.origin;
@@ -55,11 +52,11 @@ function deriveStudioUrl(runtimeBaseUrl: string): string {
 
 function buildHeaders(ctx: DebugContext): Record<string, string> {
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    'Content-Type': 'application/json',
   };
   const token = ctx.httpClient.getAuthToken();
   if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
+    headers['Authorization'] = `Bearer ${token}`;
   }
   return headers;
 }
@@ -69,15 +66,11 @@ function success(data: unknown): string {
 }
 
 function error(message: string, hint?: string): string {
-  return JSON.stringify({
-    success: false,
-    error: message,
-    ...(hint ? { hint } : {}),
-  });
+  return JSON.stringify({ success: false, error: message, ...(hint ? { hint } : {}) });
 }
 
 function toRecord(data: unknown): Record<string, unknown> {
-  if (data !== null && typeof data === "object" && !Array.isArray(data)) {
+  if (data !== null && typeof data === 'object' && !Array.isArray(data)) {
     return data as Record<string, unknown>;
   }
   return { data };
@@ -89,9 +82,9 @@ function toRecord(data: unknown): Record<string, unknown> {
  */
 function decodeJwtPayload(token: string): Record<string, unknown> | null {
   try {
-    const parts = token.split(".");
+    const parts = token.split('.');
     if (parts.length !== 3) return null;
-    const payload = Buffer.from(parts[1], "base64url").toString("utf-8");
+    const payload = Buffer.from(parts[1], 'base64url').toString('utf-8');
     return JSON.parse(payload) as Record<string, unknown>;
   } catch {
     return null;
@@ -111,32 +104,32 @@ export async function platformWorkspaces(
 
   if (!baseUrl) {
     return error(
-      "Not connected. Call platform_connect first.",
-      "Run platform_connect with your serverUrl to establish a connection.",
+      'Not connected. Call platform_connect first.',
+      'Run platform_connect with your serverUrl to establish a connection.',
     );
   }
 
   const studioBase = deriveStudioUrl(baseUrl);
   const headers = buildHeaders(ctx);
 
-  if (!headers["Authorization"]) {
+  if (!headers['Authorization']) {
     return error(
-      "Not authenticated. Call platform_connect first.",
-      "Run platform_connect to authenticate before managing workspaces.",
+      'Not authenticated. Call platform_connect first.',
+      'Run platform_connect to authenticate before managing workspaces.',
     );
   }
 
   try {
     switch (action) {
       // ----- LIST WORKSPACES -----
-      case "list": {
+      case 'list': {
         const response = await fetchWithTimeout(
           `${studioBase}/api/auth/tenants`,
           { headers },
           10_000,
         );
         if (!response.ok) {
-          const body = await response.text().catch(() => "");
+          const body = await response.text().catch(() => '');
           return error(
             `GET /api/auth/tenants failed: ${response.status} ${response.statusText}`,
             body || undefined,
@@ -150,7 +143,7 @@ export async function platformWorkspaces(
           for (const tenant of data.tenants) {
             if (
               tenant &&
-              typeof tenant === "object" &&
+              typeof tenant === 'object' &&
               (tenant as Record<string, unknown>).tenantId === currentTenantId
             ) {
               (tenant as Record<string, unknown>).active = true;
@@ -166,10 +159,10 @@ export async function platformWorkspaces(
       }
 
       // ----- SWITCH WORKSPACE -----
-      case "switch": {
+      case 'switch': {
         if (!tenantId) {
           return error(
-            "tenantId is required for the switch action.",
+            'tenantId is required for the switch action.',
             'Use action="list" first to see available workspaces and their tenantIds.',
           );
         }
@@ -177,7 +170,7 @@ export async function platformWorkspaces(
         const response = await fetchWithTimeout(
           `${studioBase}/api/auth/tenants/switch`,
           {
-            method: "POST",
+            method: 'POST',
             headers,
             body: JSON.stringify({ tenantId }),
           },
@@ -185,7 +178,7 @@ export async function platformWorkspaces(
         );
 
         if (!response.ok) {
-          const body = await response.text().catch(() => "");
+          const body = await response.text().catch(() => '');
           if (response.status === 403) {
             return error(
               `Not a member of workspace ${tenantId}.`,
@@ -210,7 +203,7 @@ export async function platformWorkspaces(
         ctx.wsClient.setAuthToken(result.accessToken);
 
         return success({
-          status: "switched",
+          status: 'switched',
           tenantId: result.tenantId,
           role: result.role,
           orgId: result.orgId || null,
@@ -219,15 +212,15 @@ export async function platformWorkspaces(
       }
 
       // ----- CURRENT WORKSPACE -----
-      case "current": {
+      case 'current': {
         const token = ctx.httpClient.getAuthToken();
         if (!token) {
-          return error("No auth token available. Call platform_connect first.");
+          return error('No auth token available. Call platform_connect first.');
         }
 
         const payload = decodeJwtPayload(token);
         if (!payload) {
-          return error("Could not decode auth token. It may be malformed.");
+          return error('Could not decode auth token. It may be malformed.');
         }
 
         return success({
@@ -249,7 +242,7 @@ export async function platformWorkspaces(
     const message = err instanceof Error ? err.message : String(err);
     return error(
       `platform_workspaces ${action} failed: ${message}`,
-      "Workspace endpoints are served by the Studio API (port 5173). Ensure Studio is running.",
+      'Workspace endpoints are served by the Studio API (port 5173). Ensure Studio is running.',
     );
   }
 }

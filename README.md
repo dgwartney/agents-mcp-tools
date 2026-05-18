@@ -32,7 +32,7 @@ Add this to your project's `.mcp.json` or `~/.claude/settings.json`.
 
 Set `AGENTS_URL` in the `env` block, or pass `serverUrl` directly to `platform_connect`.
 
-## Tools (24)
+## Tools (23)
 
 ### Connection
 
@@ -51,7 +51,6 @@ Set `AGENTS_URL` in the `env` block, or pass `serverUrl` directly to `platform_c
 | `platform_tools`         | Manage tools (list, get, create, update, delete, test)   |
 | `platform_import_export` | Import/export projects                                   |
 | `platform_config`        | Manage project and LLM configuration                     |
-| `platform_workspaces`    | Manage and switch workspaces                             |
 
 ### Debug
 

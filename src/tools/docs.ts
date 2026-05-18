@@ -5,9 +5,10 @@
  * Requires an active platform connection (platform_connect).
  */
 
-import { z } from "zod";
-import { fetchWithTimeout } from "../utils/fetch.js";
-import type { DebugContext } from "./index.js";
+import { z } from 'zod';
+import { fetchWithTimeout } from '../utils/fetch.js';
+import type { DebugContext } from './index.js';
+import { ABL_DOCS, DOC_TOPICS, searchDocumentation } from '../docs/index.js';
 
 // =============================================================================
 // CONSTANTS
@@ -23,7 +24,7 @@ const FETCH_TIMEOUT_MS = 10_000;
 function deriveStudioUrl(runtimeBaseUrl: string): string {
   try {
     const url = new URL(runtimeBaseUrl);
-    if (url.port && url.port !== "443" && url.port !== "80") {
+    if (url.port && url.port !== '443' && url.port !== '80') {
       url.port = String(DEFAULT_STUDIO_PORT);
     }
     return url.origin;
@@ -36,14 +37,65 @@ function buildHeaders(ctx: DebugContext): Record<string, string> {
   const headers: Record<string, string> = {};
   const token = ctx.httpClient.getAuthToken();
   if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
+    headers['Authorization'] = `Bearer ${token}`;
   }
   return headers;
 }
 
 function error(message: string, detail?: string): string {
+  return JSON.stringify({ success: false, error: message, ...(detail ? { detail } : {}) }, null, 2);
+}
+
+function embeddedList(detail?: string): string {
   return JSON.stringify(
-    { success: false, error: message, ...(detail ? { detail } : {}) },
+    {
+      source: 'embedded',
+      availableTopics: DOC_TOPICS,
+      total: DOC_TOPICS.length,
+      ...(detail ? { detail } : {}),
+      hint: 'These are MCP fallback topics. Connect to Studio for the full documentation index.',
+    },
+    null,
+    2,
+  );
+}
+
+function embeddedTopic(topic: string, detail?: string): string | null {
+  const content = ABL_DOCS[topic];
+  const meta = DOC_TOPICS.find((entry) => entry.id === topic);
+  if (!content || !meta) {
+    return null;
+  }
+
+  return JSON.stringify(
+    {
+      source: 'embedded',
+      topic: meta.id,
+      title: meta.title,
+      category: meta.category,
+      content,
+      ...(detail ? { detail } : {}),
+    },
+    null,
+    2,
+  );
+}
+
+function embeddedSearch(query: string, detail?: string): string {
+  const results = searchDocumentation(query);
+  return JSON.stringify(
+    {
+      source: 'embedded',
+      query,
+      resultCount: results.length,
+      results,
+      ...(detail ? { detail } : {}),
+      ...(results.length === 0
+        ? {
+            hint: 'No embedded fallback results. Connect to Studio for the full documentation index.',
+          }
+        : {}),
+    },
     null,
     2,
   );
@@ -75,16 +127,11 @@ interface RemoteSearchResult {
   results?: Array<{ id: string; title: string; excerpt: string }>;
 }
 
-async function apiFetch<T>(
-  url: string,
-  headers: Record<string, string>,
-): Promise<T> {
+async function apiFetch<T>(url: string, headers: Record<string, string>): Promise<T> {
   const res = await fetchWithTimeout(url, { headers }, FETCH_TIMEOUT_MS);
   if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(
-      `${res.status} ${res.statusText}${body ? `: ${body}` : ""}`,
-    );
+    const body = await res.text().catch(() => '');
+    throw new Error(`${res.status} ${res.statusText}${body ? `: ${body}` : ''}`);
   }
   return res.json() as Promise<T>;
 }
@@ -98,12 +145,9 @@ export const docsSchema = z.object({
     .string()
     .optional()
     .describe(
-      "Documentation topic to retrieve full content for. Use without arguments to list all available topics.",
+      'Documentation topic to retrieve full content for. Use without arguments to list all available topics.',
     ),
-  query: z
-    .string()
-    .optional()
-    .describe("Search term to find across all documentation topics"),
+  query: z.string().optional().describe('Search term to find across all documentation topics'),
 });
 
 type DocsArgs = z.infer<typeof docsSchema>;
@@ -117,18 +161,35 @@ export async function docs(args: DocsArgs, ctx: DebugContext): Promise<string> {
 
   const baseUrl = ctx.httpClient.getBaseUrl();
   if (!baseUrl) {
-    return error(
-      "Not connected. Call platform_connect first.",
-      "Documentation is served by the Studio API and requires an active connection.",
-    );
+    if (topic) {
+      return (
+        embeddedTopic(topic, 'Not connected to Studio; showing embedded MCP fallback docs.') ??
+        embeddedList('Not connected to Studio; requested topic is not embedded.')
+      );
+    }
+    if (query) {
+      return embeddedSearch(query, 'Not connected to Studio; showing embedded MCP fallback docs.');
+    }
+    return embeddedList('Not connected to Studio; showing embedded MCP fallback docs.');
   }
 
   const headers = buildHeaders(ctx);
-  if (!headers["Authorization"]) {
-    return error(
-      "Not authenticated. Call platform_connect first.",
-      "The docs API requires authentication.",
-    );
+  if (!headers['Authorization']) {
+    if (topic) {
+      return (
+        embeddedTopic(
+          topic,
+          'Not authenticated with Studio; showing embedded MCP fallback docs.',
+        ) ?? embeddedList('Not authenticated with Studio; requested topic is not embedded.')
+      );
+    }
+    if (query) {
+      return embeddedSearch(
+        query,
+        'Not authenticated with Studio; showing embedded MCP fallback docs.',
+      );
+    }
+    return embeddedList('Not authenticated with Studio; showing embedded MCP fallback docs.');
   }
 
   const studioBase = deriveStudioUrl(baseUrl);
@@ -136,29 +197,24 @@ export async function docs(args: DocsArgs, ctx: DebugContext): Promise<string> {
   // ── LIST TOPICS ──────────────────────────────────────────────────────────
   if (!topic && !query) {
     try {
-      const data = await apiFetch<RemoteIndexResult>(
-        `${studioBase}/api/abl/docs`,
-        headers,
-      );
+      const data = await apiFetch<RemoteIndexResult>(`${studioBase}/api/abl/docs`, headers);
       if (data.success && data.topics) {
         return JSON.stringify(
           {
-            source: "api",
+            source: 'api',
             availableTopics: data.topics,
             total: data.topics.length,
+            embeddedFallbackTopics: DOC_TOPICS,
             hint: 'Provide a "topic" (by id) to get full content, or a "query" to search across all topics.',
           },
           null,
           2,
         );
       }
-      return error("API returned no topics.");
+      return error('API returned no topics.');
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      return error(
-        `Failed to list topics: ${msg}`,
-        "Ensure Studio is running and you are authenticated (platform_connect).",
-      );
+      return embeddedList(`Failed to list Studio topics: ${msg}`);
     }
   }
 
@@ -173,7 +229,7 @@ export async function docs(args: DocsArgs, ctx: DebugContext): Promise<string> {
       if (data.success && data.topic) {
         return JSON.stringify(
           {
-            source: "api",
+            source: 'api',
             topic: data.topic.id,
             title: data.topic.title,
             category: data.topic.category,
@@ -183,15 +239,18 @@ export async function docs(args: DocsArgs, ctx: DebugContext): Promise<string> {
           2,
         );
       }
-      return error(
-        `Topic "${topic}" not found.`,
-        "Use debug_docs without arguments to list available topics.",
+      return (
+        embeddedTopic(topic, `Studio topic "${topic}" was not found; showing embedded fallback.`) ??
+        error(`Topic "${topic}" not found.`, 'Use debug_docs without arguments to list topics.')
       );
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      return error(
-        `Failed to fetch topic "${topic}": ${msg}`,
-        "Ensure Studio is running and you are authenticated (platform_connect).",
+      return (
+        embeddedTopic(topic, `Failed to fetch Studio topic "${topic}": ${msg}`) ??
+        error(
+          `Failed to fetch topic "${topic}": ${msg}`,
+          'Ensure Studio is running and you are authenticated (platform_connect).',
+        )
       );
     }
   }
@@ -205,24 +264,26 @@ export async function docs(args: DocsArgs, ctx: DebugContext): Promise<string> {
         headers,
       );
       if (data.success && data.results) {
+        const embeddedResults = searchDocumentation(query);
         return JSON.stringify(
           {
-            source: "api",
+            source: 'api',
             query,
-            resultCount: data.results.length,
-            results: data.results,
+            resultCount: data.results.length + embeddedResults.length,
+            results: [...data.results, ...embeddedResults],
+            embeddedFallbackResultCount: embeddedResults.length,
           },
           null,
           2,
         );
       }
-      return error("Search returned no results.");
+      return embeddedSearch(
+        query,
+        'Studio search returned no results; showing embedded fallback search.',
+      );
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      return error(
-        `Search failed: ${msg}`,
-        "Ensure Studio is running and you are authenticated (platform_connect).",
-      );
+      return embeddedSearch(query, `Studio search failed: ${msg}`);
     }
   }
 

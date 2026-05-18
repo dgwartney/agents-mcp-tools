@@ -4,7 +4,7 @@
  * Connects to the test server WebSocket and handles message routing.
  */
 
-import WebSocket from "ws";
+import WebSocket from 'ws';
 import type {
   ClientMessage,
   ServerMessage,
@@ -13,18 +13,14 @@ import type {
   AgentDetails,
   ConstructAction,
   SessionInfo,
-} from "../types.js";
-import { DEFAULT_WS_URL } from "../constants.js";
+} from '../types.js';
+import { DEFAULT_WS_URL } from '../constants.js';
+import { buildWebDebugWSProtocols } from '../utils/websocket-auth.js';
 
 export type MessageHandler = (message: ServerMessage) => void;
 
 /** Default connection timeout (10 seconds) */
 const DEFAULT_CONNECTION_TIMEOUT_MS = 10_000;
-const WEB_DEBUG_WS_AUTH_PROTOCOL = "web-debug-auth";
-
-function buildWebDebugWSProtocols(accessToken: string): string[] {
-  return [WEB_DEBUG_WS_AUTH_PROTOCOL, accessToken];
-}
 
 export interface ConnectionOptions {
   url?: string;
@@ -52,16 +48,8 @@ export class WebSocketClient {
   public onAgentLoaded?: (sessionId: string, agent: AgentDetails) => void;
   public onAgentLoadError?: (error: string) => void;
   public onResponseStart?: (sessionId: string, messageId: string) => void;
-  public onResponseChunk?: (
-    sessionId: string,
-    messageId: string,
-    chunk: string,
-  ) => void;
-  public onResponseEnd?: (
-    sessionId: string,
-    messageId: string,
-    fullText: string,
-  ) => void;
+  public onResponseChunk?: (sessionId: string, messageId: string, chunk: string) => void;
+  public onResponseEnd?: (sessionId: string, messageId: string, fullText: string) => void;
   public onActionTaken?: (sessionId: string, action: ConstructAction) => void;
   public onError?: (message: string) => void;
   public onInfo?: (message: string, configured: boolean) => void;
@@ -83,12 +71,11 @@ export class WebSocketClient {
   private authToken: string | null = null;
 
   constructor(options: ConnectionOptions = {}) {
-    this.url = options.url || DEFAULT_WS_URL || "";
+    this.url = options.url || DEFAULT_WS_URL || '';
     this.reconnect = options.reconnect ?? false;
     this.reconnectInterval = options.reconnectInterval ?? 3000;
     this.maxReconnectAttempts = options.maxReconnectAttempts ?? 5;
-    this.connectionTimeoutMs =
-      options.connectionTimeoutMs ?? DEFAULT_CONNECTION_TIMEOUT_MS;
+    this.connectionTimeoutMs = options.connectionTimeoutMs ?? DEFAULT_CONNECTION_TIMEOUT_MS;
   }
 
   /**
@@ -125,17 +112,14 @@ export class WebSocketClient {
       try {
         if (!this.authToken?.trim()) {
           const error = new Error(
-            "Internal runtime WebSocket connections require setAuthToken() before connect().",
+            'Internal runtime WebSocket connections require setAuthToken() before connect().',
           );
           this.onError?.(error.message);
           reject(error);
           return;
         }
 
-        this.ws = new WebSocket(
-          this.url,
-          buildWebDebugWSProtocols(this.authToken),
-        );
+        this.ws = new WebSocket(this.url, buildWebDebugWSProtocols(this.authToken));
 
         // Connection timeout — rejects + closes socket if open/error never fires
         connectionTimer = setTimeout(() => {
@@ -145,7 +129,7 @@ export class WebSocketClient {
             const error = new Error(
               `WebSocket connection timed out after ${timeoutSec}s connecting to ${this.url}`,
             );
-            error.name = "ConnectionTimeoutError";
+            error.name = 'ConnectionTimeoutError';
             if (this.ws) {
               this.ws.removeAllListeners();
               this.ws.close();
@@ -156,7 +140,7 @@ export class WebSocketClient {
           });
         }, this.connectionTimeoutMs);
 
-        this.ws.on("open", () => {
+        this.ws.on('open', () => {
           settle(() => {
             this.isConnecting = false;
             this.reconnectAttempts = 0;
@@ -165,22 +149,19 @@ export class WebSocketClient {
           });
         });
 
-        this.ws.on("message", (data) => {
+        this.ws.on('message', (data) => {
           this.handleMessage(data.toString());
         });
 
-        this.ws.on("close", () => {
+        this.ws.on('close', () => {
           this.isConnecting = false;
           this.onDisconnected?.();
-          if (
-            this.reconnect &&
-            this.reconnectAttempts < this.maxReconnectAttempts
-          ) {
+          if (this.reconnect && this.reconnectAttempts < this.maxReconnectAttempts) {
             this.reconnectAttempts++;
             setTimeout(() => {
               this.connect().catch((err) => {
                 console.error(
-                  "[MCP Debug] Reconnect failed:",
+                  '[MCP Debug] Reconnect failed:',
                   err instanceof Error ? err.message : err,
                 );
               });
@@ -188,7 +169,7 @@ export class WebSocketClient {
           }
         });
 
-        this.ws.on("error", (error) => {
+        this.ws.on('error', (error) => {
           settle(() => {
             this.isConnecting = false;
             this.onError?.(error.message);
@@ -229,7 +210,7 @@ export class WebSocketClient {
    */
   send(message: ClientMessage): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      throw new Error("WebSocket is not connected");
+      throw new Error('WebSocket is not connected');
     }
     this.ws.send(JSON.stringify(message));
   }
@@ -238,28 +219,28 @@ export class WebSocketClient {
    * Load an agent
    */
   loadAgent(agentPath: string, projectId: string): void {
-    this.send({ type: "load_agent", agentPath, projectId });
+    this.send({ type: 'load_agent', agentPath, projectId });
   }
 
   /**
    * Send a message to the agent
    */
   sendMessage(sessionId: string, text: string): void {
-    this.send({ type: "send_message", sessionId, text });
+    this.send({ type: 'send_message', sessionId, text });
   }
 
   /**
    * Get current state
    */
   getState(sessionId: string): void {
-    this.send({ type: "get_state", sessionId });
+    this.send({ type: 'get_state', sessionId });
   }
 
   /**
    * Run a test
    */
   runTest(sessionId: string, testId: string): void {
-    this.send({ type: "run_test", sessionId, testId });
+    this.send({ type: 'run_test', sessionId, testId });
   }
 
   /**
@@ -267,21 +248,21 @@ export class WebSocketClient {
    * Will receive trace_replay with buffered events, then live trace_event messages
    */
   subscribeSession(sessionId: string): void {
-    this.send({ type: "subscribe_session", sessionId });
+    this.send({ type: 'subscribe_session', sessionId });
   }
 
   /**
    * Unsubscribe from a session
    */
   unsubscribeSession(sessionId: string): void {
-    this.send({ type: "unsubscribe_session", sessionId });
+    this.send({ type: 'unsubscribe_session', sessionId });
   }
 
   /**
    * List all active sessions available for subscription
    */
   listSessions(): void {
-    this.send({ type: "list_sessions" });
+    this.send({ type: 'list_sessions' });
   }
 
   /**
@@ -312,65 +293,53 @@ export class WebSocketClient {
 
       // Call specific handlers
       switch (message.type) {
-        case "trace_event":
+        case 'trace_event':
           this.onTraceEvent?.(message.sessionId, message.event);
           break;
-        case "state_update":
+        case 'state_update':
           this.onStateUpdate?.(message.sessionId, message.state);
           break;
-        case "agent_loaded":
+        case 'agent_loaded':
           this.onAgentLoaded?.(message.sessionId, message.agent);
           break;
-        case "agent_load_error":
+        case 'agent_load_error':
           this.onAgentLoadError?.(message.error);
           break;
-        case "response_start":
+        case 'response_start':
           this.onResponseStart?.(message.sessionId, message.messageId);
           break;
-        case "response_chunk":
-          this.onResponseChunk?.(
-            message.sessionId,
-            message.messageId,
-            message.chunk,
-          );
+        case 'response_chunk':
+          this.onResponseChunk?.(message.sessionId, message.messageId, message.chunk);
           break;
-        case "response_end":
-          this.onResponseEnd?.(
-            message.sessionId,
-            message.messageId,
-            message.fullText,
-          );
+        case 'response_end':
+          this.onResponseEnd?.(message.sessionId, message.messageId, message.fullText);
           break;
-        case "action_taken":
+        case 'action_taken':
           this.onActionTaken?.(message.sessionId, message.action);
           break;
-        case "error":
+        case 'error':
           this.onError?.(message.message);
           break;
-        case "info":
+        case 'info':
           this.onInfo?.(message.message, message.configured);
           break;
         // Subscription-related messages
-        case "trace_replay":
-          this.onTraceReplay?.(
-            message.sessionId,
-            message.events,
-            message.totalBuffered,
-          );
+        case 'trace_replay':
+          this.onTraceReplay?.(message.sessionId, message.events, message.totalBuffered);
           break;
-        case "subscribed":
+        case 'subscribed':
           this.onSubscribed?.(message.sessionId, message.eventCount);
           break;
-        case "unsubscribed":
+        case 'unsubscribed':
           this.onUnsubscribed?.(message.sessionId);
           break;
-        case "session_list":
+        case 'session_list':
           this.onSessionList?.(message.sessions);
           break;
-        case "session_ended":
+        case 'session_ended':
           this.onSessionEnded?.(message.sessionId);
           break;
-        case "session_expired":
+        case 'session_expired':
           this.onSessionExpired?.(message.sessionId, message.reason);
           break;
       }
