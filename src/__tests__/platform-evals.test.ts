@@ -158,4 +158,28 @@ describe('platform eval tools', () => {
       }),
     );
   });
+
+  it('exposes eval run case drill-down with diagnostic filters', async () => {
+    await platformEvalRuns(
+      {
+        action: 'cases',
+        projectId: 'proj_123',
+        runId: 'run-1',
+        query: {
+          view: 'diagnostic',
+          failedOnly: true,
+          evaluatorId: 'eval-1',
+        },
+      },
+      ctx,
+    );
+
+    expect(requestStudioJsonMock).toHaveBeenCalledWith(
+      ctx,
+      expect.objectContaining({
+        method: 'GET',
+        path: '/api/projects/proj_123/evals/runs/run-1/cases?view=diagnostic&failedOnly=true&evaluatorId=eval-1',
+      }),
+    );
+  });
 });

@@ -331,7 +331,7 @@ Requires HARNESS_API_KEY environment variable.`,
   {
     name: 'platform_eval_runs',
     description:
-      'Manage eval runs for ABL repair loops. Actions: list, get, create, update, start, cancel, status, heatmap, compare, preflight, quick.',
+      'Manage eval runs for ABL repair loops. Actions: list, get, create, update, start, cancel, status, heatmap, cases, compare, preflight, quick.',
     schema: platformEvalRunsSchema,
     handler: platformEvalRuns as (args: unknown, ctx: DebugContext) => Promise<string>,
   },

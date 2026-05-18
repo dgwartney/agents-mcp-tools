@@ -60,12 +60,13 @@ export const platformEvalRunsSchema = z.object({
     'cancel',
     'status',
     'heatmap',
+    'cases',
     'compare',
     'preflight',
     'quick',
   ]),
   projectId: z.string().describe('Project ID'),
-  runId: z.string().optional().describe('Run ID for get/update/start/cancel/status/heatmap'),
+  runId: z.string().optional().describe('Run ID for get/update/start/cancel/status/heatmap/cases'),
   runIds: z
     .array(z.string())
     .optional()
@@ -203,6 +204,12 @@ export async function platformEvalRuns(
           ctx,
           'GET',
           withQuery(`${basePath}/${requireId(args.runId, 'runId')}/heatmap`, args.query),
+        );
+      case 'cases':
+        return studioRequest(
+          ctx,
+          'GET',
+          withQuery(`${basePath}/${requireId(args.runId, 'runId')}/cases`, args.query),
         );
     }
   } catch (err) {

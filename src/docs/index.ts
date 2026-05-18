@@ -114,7 +114,8 @@ Suggested workflow:
 3. debug_why_transcript_failed (or alias debug_diagnose_transcript): correlate transcript symptoms to ABL file/line causes, including finalize -> COMPLETE -> RESPOND: "".
 4. platform_validate_package: run platform validation and import preview when projectId is available.
 5. platform_eval_personas, platform_eval_scenarios, platform_eval_evaluators, platform_eval_sets, and platform_eval_runs: generate or run eval assets.
-6. Patch the local package and repeat until validation and evals agree.
+6. platform_eval_runs with action "cases": drill from a failing heatmap cell into diagnosticTranscript, conversation, traceEvents, toolCalls, trajectory, and evaluator scores.
+7. Patch the local package and repeat until validation and evals agree.
 
 The key debugging question is: what does the compiler see?
 
