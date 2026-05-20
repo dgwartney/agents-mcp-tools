@@ -1,10 +1,27 @@
 /**
- * MCP Debug Server
+ * Arch MCP Server
  *
- * Debug ABL applications with Claude Code via MCP.
+ * Build, evaluate, optimize, debug, and analyze Agent Platform projects via MCP.
  */
 
-export { MCPDebugServer, type MCPDebugServerOptions } from './server.js';
+export {
+  MCPDebugServer,
+  MCPDebugServer as ArchMCPServer,
+  type MCPDebugServerOptions,
+} from './server.js';
+export {
+  ARCH_CAPABILITY_ORDER,
+  ARCH_MCP_DESCRIPTION,
+  ARCH_MCP_DISPLAY_NAME,
+  ARCH_MCP_LOG_PREFIX,
+  ARCH_MCP_ROUTE_KEY_PREFIX,
+  ARCH_MCP_SERVER_NAME,
+  formatArchToolDescription,
+  formatArchToolSummary,
+  getArchCapabilityForTool,
+  hasArchCapabilityForTool,
+  type ArchCapability,
+} from './tools/persona.js';
 
 // Re-export types
 export * from './types.js';

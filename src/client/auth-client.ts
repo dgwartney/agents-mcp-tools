@@ -1,7 +1,7 @@
 /**
  * Auth Client
  *
- * Implements the authentication cascade for MCP debug tool:
+ * Implements the authentication cascade for Arch MCP tools:
  *   1. Explicit token (if provided)
  *   2. Stored credentials (~/.config/kore-platform/credentials)
  *   3. Device authorization flow (RFC 8628)
@@ -20,6 +20,7 @@ import {
 } from './credentials.js';
 import { fetchWithTimeout } from '../utils/fetch.js';
 import { execFile } from 'node:child_process';
+import { ARCH_MCP_LOG_PREFIX } from '../tools/persona.js';
 
 export interface AuthResult {
   token: string;
@@ -107,7 +108,7 @@ async function tryStoredCredentials(
     // If token is still valid, use it directly
     if (hasValidToken(creds)) {
       setTokenOnClients(httpClient, wsClient, creds.token);
-      console.error('[MCP Debug] Using stored credentials');
+      console.error(`${ARCH_MCP_LOG_PREFIX} Using stored credentials`);
       return { token: creds.token, method: 'stored_credentials' };
     }
 
@@ -127,12 +128,12 @@ async function tryStoredCredentials(
         if (response.ok) {
           const data = (await response.json()) as { accessToken: string };
           setTokenOnClients(httpClient, wsClient, data.accessToken);
-          console.error('[MCP Debug] Refreshed stored credentials');
+          console.error(`${ARCH_MCP_LOG_PREFIX} Refreshed stored credentials`);
           return { token: data.accessToken, method: 'stored_credentials' };
         }
       } catch (err) {
         console.error(
-          '[MCP Debug] Token refresh failed:',
+          `${ARCH_MCP_LOG_PREFIX} Token refresh failed:`,
           err instanceof Error ? err.message : String(err),
         );
         // Refresh failed, fall through to device auth
@@ -140,7 +141,7 @@ async function tryStoredCredentials(
     }
   } catch (err) {
     console.error(
-      '[MCP Debug] Credential reading failed:',
+      `${ARCH_MCP_LOG_PREFIX} Credential reading failed:`,
       err instanceof Error ? err.message : String(err),
     );
     // Credential reading failed, fall through to device auth
@@ -159,7 +160,9 @@ function openBrowser(url: string): void {
   try {
     new URL(url);
   } catch {
-    console.error(`[MCP Debug] Invalid verification URL, skipping browser launch: ${url}`);
+    console.error(
+      `${ARCH_MCP_LOG_PREFIX} Invalid verification URL, skipping browser launch: ${url}`,
+    );
     return;
   }
 
@@ -181,12 +184,14 @@ function openBrowser(url: string): void {
   try {
     execFile(cmd, args, (err) => {
       if (err) {
-        console.error(`[MCP Debug] Could not open browser: ${err.message}`);
+        console.error(`${ARCH_MCP_LOG_PREFIX} Could not open browser: ${err.message}`);
       }
     });
   } catch (err) {
     console.error(
-      `[MCP Debug] Browser launch failed: ${err instanceof Error ? err.message : String(err)}`,
+      `${ARCH_MCP_LOG_PREFIX} Browser launch failed: ${
+        err instanceof Error ? err.message : String(err)
+      }`,
     );
   }
 }
@@ -230,7 +235,7 @@ async function deviceAuthFlow(
   };
 
   console.error(
-    `[MCP Debug] Device auth initiated. Opening browser: ${deviceAuth.verification_uri_complete}`,
+    `${ARCH_MCP_LOG_PREFIX} Device auth initiated. Opening browser: ${deviceAuth.verification_uri_complete}`,
   );
 
   // 2. Auto-open browser
@@ -279,10 +284,12 @@ async function persistTokenIfPossible(result: AuthResult, _baseUrl: string): Pro
       expiresAt,
       email: payload.email,
     });
-    console.error('[MCP Debug] Credentials saved to ~/.config/kore-platform/credentials.json');
+    console.error(
+      `${ARCH_MCP_LOG_PREFIX} Credentials saved to ~/.config/kore-platform/credentials.json`,
+    );
   } catch (err) {
     console.error(
-      '[MCP Debug] Failed to persist credentials:',
+      `${ARCH_MCP_LOG_PREFIX} Failed to persist credentials:`,
       err instanceof Error ? err.message : String(err),
     );
   }
@@ -325,7 +332,7 @@ async function pollDeviceAuth(
         };
 
         setTokenOnClients(httpClient, wsClient, tokenData.access_token);
-        console.error('[MCP Debug] Authenticated via device authorization');
+        console.error(`${ARCH_MCP_LOG_PREFIX} Authenticated via device authorization`);
 
         return {
           token: tokenData.access_token,
@@ -357,7 +364,10 @@ async function pollDeviceAuth(
       );
     } catch (e) {
       if (e instanceof DeviceAuthError) throw e;
-      console.error('[MCP Debug] Token polling error:', e instanceof Error ? e.message : String(e));
+      console.error(
+        `${ARCH_MCP_LOG_PREFIX} Token polling error:`,
+        e instanceof Error ? e.message : String(e),
+      );
       await sleep(pollInterval);
       continue;
     }

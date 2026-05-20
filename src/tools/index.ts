@@ -91,7 +91,7 @@ export const tools: ToolDefinition[] = [
   {
     name: 'platform_connect',
     description:
-      'Connect to the server WebSocket to start receiving traces. Call this first before using other debug tools. ' +
+      'Connect to the server WebSocket to start receiving traces. Call this first before using other Arch debug tools. ' +
       'Auth is automatic — stored credentials or device auth are tried in order. ' +
       'If device auth is needed, the browser opens automatically and the tool polls until approved (single call, no two-phase). ' +
       'Credentials are saved to ~/.config/kore-platform/credentials.json for future sessions. ' +

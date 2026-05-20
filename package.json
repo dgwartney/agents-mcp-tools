@@ -1,7 +1,7 @@
 {
   "name": "@koredotcom/agents-mcp-tools",
   "version": "1.0.0",
-  "description": "Kore.ai Agent Platform — MCP tools for Claude Code (debug, platform management, docs, CI/CD)",
+  "description": "Arch MCP tools for Kore.ai Agent Platform (build, evaluate, optimize, debug, analyze)",
   "type": "module",
   "license": "UNLICENSED",
   "main": "./dist/src/index.js",

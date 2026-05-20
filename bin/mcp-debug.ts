@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * MCP Debug Server CLI
+ * Arch MCP Server CLI
  *
  * Usage: mcp-debug [options]
  *
@@ -12,6 +12,14 @@
  */
 
 import { MCPDebugServer } from '../src/server.js';
+import { tools } from '../src/tools/index.js';
+import {
+  ARCH_CAPABILITY_ORDER,
+  ARCH_MCP_DESCRIPTION,
+  ARCH_MCP_SERVER_NAME,
+  formatArchToolSummary,
+  getArchCapabilityForTool,
+} from '../src/tools/persona.js';
 
 function parseArgs(args: string[]): {
   serverUrl?: string;
@@ -39,10 +47,21 @@ function parseArgs(args: string[]): {
 }
 
 function showHelp(): void {
-  console.log(`
-Kore.ai Agent Platform — MCP Tools for Claude Code
+  const toolNameWidth = Math.max(...tools.map((tool) => tool.name.length));
+  const groupedTools = ARCH_CAPABILITY_ORDER.map((capability) => {
+    const capabilityTools = tools.filter(
+      (tool) => getArchCapabilityForTool(tool.name) === capability,
+    );
+    const lines = capabilityTools.map(
+      (tool) => `  ${tool.name.padEnd(toolNameWidth)}  ${formatArchToolSummary(tool)}`,
+    );
+    return `  Arch ${capability}:\n${lines.join('\n')}`;
+  }).join('\n\n');
 
-Debug, manage, and interact with Agent Platform via Model Context Protocol.
+  console.log(`
+Arch - MCP Tools for Agent Platform
+
+${ARCH_MCP_DESCRIPTION}
 
 Usage: agents-mcp-tools [options]
 
@@ -57,40 +76,15 @@ Environment Variables:
                                  https://agents-staging.kore.ai (staging)
                                  http://localhost:3112           (local)
 
-Available MCP Tools (23):
+Available MCP Tools (${tools.length}):
 
-  Debug Tools:
-  platform_connect               Connect to server (auth is automatic)
-  debug_list_agents           List available agents
-  debug_load_agent            Load an agent and create debug session
-  debug_send_message          Send a message to the agent
-  debug_get_current_state     Get current agent state (live)
-  debug_traces                Get/search trace events with filters
-  debug_get_span_tree         Get hierarchical execution flow
-  debug_explain_decision      Explain a decision with context
-  debug_get_flow_graph        Get agent graph (JSON or Mermaid)
-  debug_get_errors            Get categorized errors and warnings
-  debug_diagnose              Diagnose agent config + execution (configOnly mode available)
-  debug_analyze_session       Automated diagnostics with issue detection
-  debug_list_active_sessions  List observable sessions
-  debug_session               Subscribe/unsubscribe to session traces
-  debug_docs                  Get or search ABL documentation
-  debug_harness_logs          Get Harness CI execution logs
-
-  Platform Management:
-  platform_projects           Manage projects (list, get, create, delete)
-  platform_agents             Manage agents (list, get, save_dsl)
-  platform_versions           Manage agent versions (list, create, get, promote, diff)
-  platform_deployments        Manage deployments (list, create, get, retire, rollback)
-  platform_tools              Manage tools (list, get, create, update, delete, test)
-  platform_import_export      Import/export projects (export_preview, export, import_preview, import)
-  platform_config             Manage project config (get_settings, update_settings, get_llm_config, update_llm_config)
+${groupedTools}
 
 Claude Code Configuration:
   Add to your project's .mcp.json or ~/.claude/settings.json:
   {
     "mcpServers": {
-      "agent-platform-debug": {
+      "${ARCH_MCP_SERVER_NAME}": {
         "command": "npx",
         "args": ["@koredotcom/agents-mcp-tools"],
         "env": {

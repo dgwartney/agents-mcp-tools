@@ -8,6 +8,7 @@
 import { z } from 'zod';
 import type { DebugContext } from './index.js';
 import type { TraceEventWithId, SessionInfo } from '../types.js';
+import { ARCH_MCP_LOG_PREFIX } from './persona.js';
 
 // =============================================================================
 // SCHEMAS
@@ -141,7 +142,7 @@ async function subscribeSession(sessionId: string, ctx: DebugContext): Promise<s
           ctx.traceStore.addEvent(event);
         }
         console.error(
-          `[MCP Debug] Received ${events.length} buffered events for session ${sessionId}`,
+          `${ARCH_MCP_LOG_PREFIX} Received ${events.length} buffered events for session ${sessionId}`,
         );
       }
     };

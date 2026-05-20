@@ -32,12 +32,12 @@ Normalization rules:
 - Skipped files: .DS_Store.
 - Limits: 500 files and 1 MB per file in local MCP assembly.
 
-Recommended loop:
-1. platform_validate_package with path, files, or data.files.
-2. platform_package_model to inspect the compiler-visible agents, tools, profiles, handoffs, memory, flow, and unresolved refs.
-3. debug_lint_abl for repair-focused ABL design issues.
-4. platform_eval_* tools to run persona/scenario/evaluator/set/run workflows.
-5. Patch the package and repeat validation/evals until clean.`,
+Recommended Arch loop:
+1. Build with platform_import_export, platform_projects, platform_agents, platform_tools, and platform_config.
+2. Optimize with platform_validate_package, platform_package_model, and debug_lint_abl.
+3. Evaluate with platform_eval_* tools to run persona/scenario/evaluator/set/run workflows.
+4. Debug with platform_connect, debug_traces, debug_get_errors, and debug_why_transcript_failed.
+5. Analyze with debug_diagnose and debug_analyze_session, then patch and repeat until validation/evals are clean.`,
 
   'mcp/import-contract': `# Import Preview and Apply Contract
 
@@ -104,9 +104,9 @@ Repair workflow:
 2. If an agent references a missing profile, add the profile file and project.json declaration or remove the USE BEHAVIOR_PROFILE line.
 3. Use debug_lint_abl and platform_validate_package to catch syntax, dependency, and design issues before import apply.`,
 
-  'mcp/abl-repair-loop': `# ABL Repair and Eval Loop
+  'mcp/abl-repair-loop': `# Arch ABL Repair and Eval Loop
 
-The MCP tools are designed for iterative ABL repair, not only import troubleshooting.
+Arch's MCP tools are designed for iterative ABL repair, not only import troubleshooting.
 
 Suggested workflow:
 1. platform_package_model: inspect what the compiler sees.
@@ -142,7 +142,11 @@ export const DOC_TOPICS: EmbeddedDocTopic[] = [
     title: 'Behavior Profile Package Contract',
     category: 'MCP Fallback',
   },
-  { id: 'mcp/abl-repair-loop', title: 'ABL Repair and Eval Loop', category: 'MCP Fallback' },
+  {
+    id: 'mcp/abl-repair-loop',
+    title: 'Arch ABL Repair and Eval Loop',
+    category: 'MCP Fallback',
+  },
 ];
 
 export function searchDocumentation(query: string): Array<{

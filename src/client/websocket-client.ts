@@ -16,6 +16,7 @@ import type {
 } from '../types.js';
 import { DEFAULT_WS_URL } from '../constants.js';
 import { buildWebDebugWSProtocols } from '../utils/websocket-auth.js';
+import { ARCH_MCP_LOG_PREFIX } from '../tools/persona.js';
 
 export type MessageHandler = (message: ServerMessage) => void;
 
@@ -161,7 +162,7 @@ export class WebSocketClient {
             setTimeout(() => {
               this.connect().catch((err) => {
                 console.error(
-                  '[MCP Debug] Reconnect failed:',
+                  `${ARCH_MCP_LOG_PREFIX} Reconnect failed:`,
                   err instanceof Error ? err.message : err,
                 );
               });
@@ -345,7 +346,7 @@ export class WebSocketClient {
       }
     } catch (error) {
       const message = `Failed to parse WebSocket message: ${error instanceof Error ? error.message : error}`;
-      console.error(`[MCP Debug] ${message}`);
+      console.error(`${ARCH_MCP_LOG_PREFIX} ${message}`);
       this.onError?.(message);
     }
   }

@@ -1,7 +1,8 @@
 /**
- * MCP Debug Server
+ * Arch MCP Server
  *
- * Model Context Protocol server for debugging Agent Platform applications.
+ * Model Context Protocol server for Agent Platform build, eval, optimize,
+ * debug, and analysis workflows.
  */
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
@@ -20,6 +21,11 @@ import {
 import { deriveUrls } from './utils/url.js';
 import { DEFAULT_HTTP_URL, DEFAULT_WS_URL } from './constants.js';
 import { tools, getTool, zodToJsonSchema, type DebugContext } from './tools/index.js';
+import {
+  ARCH_MCP_LOG_PREFIX,
+  ARCH_MCP_SERVER_NAME,
+  formatArchToolDescription,
+} from './tools/persona.js';
 
 export interface MCPDebugServerOptions {
   /** Single server URL — derives both HTTP and WS URLs automatically */
@@ -79,7 +85,7 @@ export class MCPDebugServer {
     // Create MCP server
     this.server = new Server(
       {
-        name: 'agent-platform-debug',
+        name: ARCH_MCP_SERVER_NAME,
         version: '1.0.0',
       },
       {
@@ -124,19 +130,19 @@ export class MCPDebugServer {
 
     // Handle connection status
     this.wsClient.onConnected = () => {
-      console.error('[MCP Debug] Connected to server');
+      console.error(`${ARCH_MCP_LOG_PREFIX} Connected to server`);
     };
 
     this.wsClient.onDisconnected = () => {
-      console.error('[MCP Debug] Disconnected from server');
+      console.error(`${ARCH_MCP_LOG_PREFIX} Disconnected from server`);
     };
 
     this.wsClient.onError = (message) => {
-      console.error('[MCP Debug] WebSocket error:', message);
+      console.error(`${ARCH_MCP_LOG_PREFIX} WebSocket error:`, message);
     };
 
     this.wsClient.onInfo = (message, configured) => {
-      console.error(`[MCP Debug] ${message} (API configured: ${configured})`);
+      console.error(`${ARCH_MCP_LOG_PREFIX} ${message} (API configured: ${configured})`);
     };
   }
 
@@ -149,7 +155,7 @@ export class MCPDebugServer {
       return {
         tools: tools.map((tool) => ({
           name: tool.name,
-          description: tool.description,
+          description: formatArchToolDescription(tool),
           inputSchema: zodToJsonSchema(tool.schema),
         })),
       };
@@ -193,7 +199,7 @@ export class MCPDebugServer {
         const errorCode = (error as { code?: string }).code;
         const errorCause = error instanceof Error ? error.cause : undefined;
 
-        console.error(`[MCP Debug] Tool "${name}" error:`, {
+        console.error(`${ARCH_MCP_LOG_PREFIX} Tool "${name}" error:`, {
           name: errorName,
           code: errorCode,
           message,
@@ -223,7 +229,7 @@ export class MCPDebugServer {
   async start(): Promise<void> {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
-    console.error('[MCP Debug] Server started');
+    console.error(`${ARCH_MCP_LOG_PREFIX} Server started`);
   }
 
   /**
@@ -232,6 +238,6 @@ export class MCPDebugServer {
   async stop(): Promise<void> {
     this.wsClient.disconnect();
     await this.server.close();
-    console.error('[MCP Debug] Server stopped');
+    console.error(`${ARCH_MCP_LOG_PREFIX} Server stopped`);
   }
 }

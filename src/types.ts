@@ -1,5 +1,5 @@
 /**
- * Type definitions for MCP Debug Server
+ * Type definitions for the Arch MCP server
  */
 
 // =============================================================================
