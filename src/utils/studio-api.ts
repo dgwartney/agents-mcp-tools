@@ -1,13 +1,14 @@
 import type { DebugContext } from '../tools/index.js';
 import { sanitizeResponse } from './sanitize.js';
 import { fetchWithTimeout } from './fetch.js';
+import { isRemoteUrl } from './url.js';
 
 const DEFAULT_STUDIO_PORT = 5173;
 
 export function deriveStudioUrl(runtimeBaseUrl: string): string {
   try {
     const url = new URL(runtimeBaseUrl);
-    if (url.port && url.port !== '443' && url.port !== '80') {
+    if (!isRemoteUrl(runtimeBaseUrl) && url.port && url.port !== '443' && url.port !== '80') {
       url.port = String(DEFAULT_STUDIO_PORT);
     }
     return url.origin;

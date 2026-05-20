@@ -15,6 +15,7 @@
 
 import { z } from 'zod';
 import type { DebugContext } from './index.js';
+import { buildStudioHeaders, deriveStudioUrl } from '../utils/studio-api.js';
 import { fetchWithTimeout } from '../utils/fetch.js';
 
 // =============================================================================
@@ -29,37 +30,8 @@ export const platformWorkspacesSchema = z.object({
 type PlatformWorkspacesArgs = z.infer<typeof platformWorkspacesSchema>;
 
 // =============================================================================
-// CONSTANTS
-// =============================================================================
-
-const DEFAULT_STUDIO_PORT = 5173;
-
-// =============================================================================
 // HELPERS
 // =============================================================================
-
-function deriveStudioUrl(runtimeBaseUrl: string): string {
-  try {
-    const url = new URL(runtimeBaseUrl);
-    if (url.port && url.port !== '443' && url.port !== '80') {
-      url.port = String(DEFAULT_STUDIO_PORT);
-    }
-    return url.origin;
-  } catch {
-    return runtimeBaseUrl;
-  }
-}
-
-function buildHeaders(ctx: DebugContext): Record<string, string> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
-  const token = ctx.httpClient.getAuthToken();
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  return headers;
-}
 
 function success(data: unknown): string {
   return JSON.stringify({ success: true, ...toRecord(data) }, null, 2);
@@ -110,7 +82,7 @@ export async function platformWorkspaces(
   }
 
   const studioBase = deriveStudioUrl(baseUrl);
-  const headers = buildHeaders(ctx);
+  const headers = buildStudioHeaders(ctx);
 
   if (!headers['Authorization']) {
     return error(

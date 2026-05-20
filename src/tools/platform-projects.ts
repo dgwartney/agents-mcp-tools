@@ -12,6 +12,7 @@
 
 import { z } from 'zod';
 import type { DebugContext } from './index.js';
+import { buildStudioHeaders, deriveStudioUrl } from '../utils/studio-api.js';
 import { fetchWithTimeout } from '../utils/fetch.js';
 import { validatePathParam } from '../utils/validate.js';
 import { sanitizeResponse } from '../utils/sanitize.js';
@@ -39,45 +40,8 @@ export const platformProjectsSchema = z.object({
 type PlatformProjectsArgs = z.infer<typeof platformProjectsSchema>;
 
 // =============================================================================
-// CONSTANTS
-// =============================================================================
-
-/** Studio runs on port 5173 by default */
-const DEFAULT_STUDIO_PORT = 5173;
-
-// =============================================================================
 // HELPERS
 // =============================================================================
-
-/**
- * Derive the Studio base URL from the runtime base URL.
- * For deployed environments (no explicit port), Studio is co-hosted behind the
- * same origin. For local dev, replace the port with the Studio port.
- */
-function deriveStudioUrl(runtimeBaseUrl: string): string {
-  try {
-    const url = new URL(runtimeBaseUrl);
-    // If the URL has an explicit non-standard port (local dev), swap to Studio port
-    if (url.port && url.port !== '443' && url.port !== '80') {
-      url.port = String(DEFAULT_STUDIO_PORT);
-    }
-    return url.origin;
-  } catch {
-    // If we can't parse the URL, return it unchanged — let the request fail with a clear error
-    return runtimeBaseUrl;
-  }
-}
-
-function buildHeaders(ctx: DebugContext): Record<string, string> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
-  const token = ctx.httpClient.getAuthToken();
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  return headers;
-}
 
 function success(data: unknown): string {
   return JSON.stringify(sanitizeResponse(data), null, 2);
@@ -97,7 +61,7 @@ export async function platformProjects(
 ): Promise<string> {
   const { action, projectId, name, description, entryAgentName, confirm } = args;
   const studioBase = deriveStudioUrl(ctx.httpClient.getBaseUrl());
-  const headers = buildHeaders(ctx);
+  const headers = buildStudioHeaders(ctx);
   const basePath = `${studioBase}/api/projects`;
 
   try {

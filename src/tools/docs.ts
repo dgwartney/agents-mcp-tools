@@ -6,6 +6,7 @@
  */
 
 import { z } from 'zod';
+import { deriveStudioUrl } from '../utils/studio-api.js';
 import { fetchWithTimeout } from '../utils/fetch.js';
 import type { DebugContext } from './index.js';
 import { ABL_DOCS, DOC_TOPICS, searchDocumentation } from '../docs/index.js';
@@ -14,24 +15,11 @@ import { ABL_DOCS, DOC_TOPICS, searchDocumentation } from '../docs/index.js';
 // CONSTANTS
 // =============================================================================
 
-const DEFAULT_STUDIO_PORT = 5173;
 const FETCH_TIMEOUT_MS = 10_000;
 
 // =============================================================================
 // HELPERS
 // =============================================================================
-
-function deriveStudioUrl(runtimeBaseUrl: string): string {
-  try {
-    const url = new URL(runtimeBaseUrl);
-    if (url.port && url.port !== '443' && url.port !== '80') {
-      url.port = String(DEFAULT_STUDIO_PORT);
-    }
-    return url.origin;
-  } catch {
-    return runtimeBaseUrl;
-  }
-}
 
 function buildHeaders(ctx: DebugContext): Record<string, string> {
   const headers: Record<string, string> = {};

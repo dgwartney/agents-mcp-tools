@@ -54,6 +54,7 @@ vi.mock('ws', () => {
 
 import { WebSocketClient } from '../client/websocket-client.js';
 
+
 describe('WebSocketClient', () => {
   beforeEach(() => {
     websocketInstances.length = 0;

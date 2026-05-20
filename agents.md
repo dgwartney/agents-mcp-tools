@@ -11,6 +11,7 @@
 - The npm package name is `@koredotcom/agents-mcp-tools`, not what the directory name suggests. Use this for `pnpm build --filter=`.
 - `fetchWithTimeout` default is 5s — fine for health checks, but too aggressive for auth endpoints on remote servers. Always pass explicit timeouts for auth/token calls (15s recommended).
 - `deriveStudioUrl()` in platform-projects.ts rewrites runtime URLs to Studio URLs for project CRUD. If the URL can't be parsed, it should return the original URL unchanged, not fall back to localhost.
+- Studio API helpers must keep remote server URLs on the connected origin (for example `https://agents-dev.kore.ai`) and only rewrite explicit local runtime ports to `5173`.
 - The `platform-projects.ts` file may be concurrently modified (schema additions). Re-read before editing.
 
 ## Patterns

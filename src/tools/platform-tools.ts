@@ -3,15 +3,14 @@
  *
  * Manage project tools (list, get, create, update, delete, test).
  *
- * NOTE: Tool CRUD endpoints live on the Studio API (port 5173), not the
- * runtime (port 3112).  The HttpClient base URL typically points at the
- * runtime, so this tool rewrites the base URL to the Studio origin when
- * making requests.  If the Studio API is unreachable, the caller should
- * be told to start the Studio dev server (`cd apps/studio && pnpm dev`).
+ * NOTE: Tool CRUD endpoints live on the Studio API. Remote deployments
+ * co-host Studio behind the same origin as runtime; local dev rewrites
+ * the runtime port to the Studio port.
  */
 
 import { z } from 'zod';
 import type { DebugContext } from './index.js';
+import { buildStudioHeaders, deriveStudioUrl } from '../utils/studio-api.js';
 import { fetchWithTimeout } from '../utils/fetch.js';
 import { validatePathParam } from '../utils/validate.js';
 import { sanitizeResponse } from '../utils/sanitize.js';
@@ -39,44 +38,8 @@ export const platformToolsSchema = z.object({
 type PlatformToolsArgs = z.infer<typeof platformToolsSchema>;
 
 // =============================================================================
-// CONSTANTS
-// =============================================================================
-
-/** Studio runs on port 5173 by default */
-const DEFAULT_STUDIO_PORT = 5173;
-
-// =============================================================================
 // HELPERS
 // =============================================================================
-
-/**
- * Derive the Studio base URL from the runtime base URL.
- * Replaces the port with the Studio port while keeping the host.
- */
-function deriveStudioUrl(runtimeBaseUrl: string): string {
-  try {
-    const url = new URL(runtimeBaseUrl);
-    url.port = String(DEFAULT_STUDIO_PORT);
-    // Studio API routes are under /api/projects/...
-    return url.origin;
-  } catch {
-    return `http://localhost:${DEFAULT_STUDIO_PORT}`;
-  }
-}
-
-/**
- * Build common headers (JSON content type + auth token when available).
- */
-function buildHeaders(ctx: DebugContext): Record<string, string> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
-  const token = ctx.httpClient.getAuthToken();
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  return headers;
-}
 
 function success(data: unknown): string {
   return JSON.stringify({ success: true, data: sanitizeResponse(data) });
@@ -92,9 +55,8 @@ function error(message: string, hint?: string): string {
 
 export async function platformTools(args: PlatformToolsArgs, ctx: DebugContext): Promise<string> {
   const { action, projectId, toolId, name, type, definition, confirm } = args;
-  // TODO: Make Studio URL explicitly configurable instead of deriving from runtime URL
   const studioUrl = deriveStudioUrl(ctx.httpClient.getBaseUrl());
-  const headers = buildHeaders(ctx);
+  const headers = buildStudioHeaders(ctx);
   const safeProjectId = validatePathParam(projectId, 'projectId');
   const basePath = `${studioUrl}/api/projects/${safeProjectId}/tools`;
 
@@ -234,7 +196,7 @@ export async function platformTools(args: PlatformToolsArgs, ctx: DebugContext):
     const message = err instanceof Error ? err.message : String(err);
     return error(
       `Tool management request failed: ${message}`,
-      'Tool CRUD endpoints are served by the Studio API (port 5173). Ensure Studio is running: cd apps/studio && pnpm dev',
+      'Tool CRUD endpoints are served by Studio. For local runtime URLs, ensure Studio is running on http://localhost:5173. For remote URLs, Arch uses the connected origin.',
     );
   }
 }
