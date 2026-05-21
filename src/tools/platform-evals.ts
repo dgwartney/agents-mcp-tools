@@ -9,6 +9,7 @@ import { z } from 'zod';
 import type { DebugContext } from './index.js';
 import { requestStudioJson, formatStudioFailure } from '../utils/studio-api.js';
 import { sanitizeResponse } from '../utils/sanitize.js';
+import { sanitizeEvalPreflightResponse } from '../utils/eval-preflight-sanitizer.js';
 import { validatePathParam } from '../utils/validate.js';
 
 const querySchema = z.record(z.union([z.string(), z.number(), z.boolean()])).optional();
@@ -169,7 +170,9 @@ export async function platformEvalRuns(
       case 'create':
         return studioRequest(ctx, 'POST', basePath, args.body ?? {});
       case 'preflight':
-        return runProjectAction(ctx, args.projectId, 'preflight', args.body ?? {});
+        return runProjectAction(ctx, args.projectId, 'preflight', args.body ?? {}, {
+          sanitizeBody: sanitizeEvalPreflightResponse,
+        });
       case 'quick':
         return runProjectAction(ctx, args.projectId, 'quick', args.body ?? {});
       case 'compare':
@@ -273,10 +276,11 @@ function runProjectAction(
   projectId: string,
   actionPath: string,
   body: Record<string, unknown>,
+  options?: { sanitizeBody?: (body: unknown) => unknown },
 ): Promise<string> {
   try {
     const basePath = `/api/projects/${validatePathParam(projectId, 'projectId')}/evals`;
-    return studioRequest(ctx, 'POST', `${basePath}/${actionPath}`, body);
+    return studioRequest(ctx, 'POST', `${basePath}/${actionPath}`, body, options);
   } catch (err) {
     return Promise.resolve(jsonError(err));
   }
@@ -336,6 +340,7 @@ async function studioRequest(
   method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
   path: string,
   body?: unknown,
+  options?: { sanitizeBody?: (body: unknown) => unknown },
 ): Promise<string> {
   try {
     const result = await requestStudioJson(ctx, {
@@ -349,7 +354,8 @@ async function studioRequest(
       return formatStudioFailure(path, result, method);
     }
 
-    return JSON.stringify({ success: true, data: sanitizeResponse(result.body) }, null, 2);
+    const responseBody = options?.sanitizeBody ? options.sanitizeBody(result.body) : result.body;
+    return JSON.stringify({ success: true, data: sanitizeResponse(responseBody) }, null, 2);
   } catch (err) {
     return jsonError(err);
   }
