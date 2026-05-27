@@ -32,6 +32,7 @@ describe('Embedded documentation fallback', () => {
   test('ABL_DOCS includes focused MCP fallback topics', () => {
     expect(ABL_DOCS['mcp/import-contract']).toContain('Import Preview and Apply Contract');
     expect(ABL_DOCS['mcp/behavior-profiles']).toContain('Behavior Profile Package Contract');
+    expect(ABL_DOCS['mcp/abl-repair-loop']).toContain('compiledRuntimeConstraints');
   });
 
   test('DOC_TOPICS exposes topic metadata', () => {

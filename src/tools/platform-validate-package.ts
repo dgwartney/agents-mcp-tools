@@ -10,6 +10,10 @@
 import { z } from 'zod';
 import type { DebugContext } from './index.js';
 import { loadPackageFiles, readPackageFilesFromData } from '../utils/package-files.js';
+import {
+  extractPackageConstraintObservability,
+  extractPackageStructuralSummary,
+} from '../utils/package-contract.js';
 import { formatStudioFailure, postStudioJson } from '../utils/studio-api.js';
 import { validatePathParam } from '../utils/validate.js';
 
@@ -42,7 +46,9 @@ export async function platformValidatePackage(
       files: args.files ?? readPackageFilesFromData(args.data),
     });
     const endpointPath = '/api/abl/package/validate';
-    const result = await postStudioJson(ctx, endpointPath, { files: loaded.files });
+    const result = await postStudioJson(ctx, endpointPath, {
+      files: loaded.files,
+    });
 
     if (!result.ok) {
       return formatStudioFailure(endpointPath, result);
@@ -61,6 +67,8 @@ export async function platformValidatePackage(
         success: true,
         source: loaded.source,
         fileWarnings: loaded.warnings,
+        constraintObservability: extractPackageConstraintObservability(result.body),
+        structuralSummary: extractPackageStructuralSummary(result.body),
         data: result.body,
         ...(importPreview ? { importPreview } : {}),
       },

@@ -23,7 +23,25 @@ beforeEach(() => {
 describe('platformValidatePackage', () => {
   it('accepts import-style data.files payloads for validator/import-preview parity', async () => {
     fetchMock
-      .mockResolvedValueOnce(jsonResponse({ valid: true, issues: [] }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          diagnostics: {
+            valid: true,
+            issues: [],
+            constraintObservability: {
+              rawConstraints: 1,
+              parsedConstraints: 1,
+              compiledRuntimeConstraints: 1,
+            },
+            structuralSummary: {
+              totals: {
+                agents: 1,
+                rawVsCompiledMismatches: 0,
+              },
+            },
+          },
+        }),
+      )
       .mockResolvedValueOnce(
         jsonResponse({
           success: true,
@@ -48,10 +66,29 @@ describe('platformValidatePackage', () => {
         },
         ctx,
       ),
-    ) as { success: boolean; importPreview: { canApply: boolean } };
+    ) as {
+      success: boolean;
+      constraintObservability: {
+        rawConstraints: number;
+        parsedConstraints: number;
+        compiledRuntimeConstraints: number;
+      };
+      importPreview: { canApply: boolean };
+      structuralSummary: {
+        totals: { agents: number; rawVsCompiledMismatches: number };
+      };
+    };
 
     expect(result.success).toBe(true);
+    expect(result.constraintObservability).toEqual({
+      rawConstraints: 1,
+      parsedConstraints: 1,
+      compiledRuntimeConstraints: 1,
+    });
     expect(result.importPreview.canApply).toBe(true);
+    expect(result.structuralSummary).toMatchObject({
+      totals: { agents: 1, rawVsCompiledMismatches: 0 },
+    });
 
     const validateBody = JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string) as {
       files: Record<string, string>;
@@ -60,7 +97,9 @@ describe('platformValidatePackage', () => {
       deleteUnmatched: boolean;
       files: Record<string, string>;
     };
-    expect(validateBody.files).toEqual({ 'project.json': '{"format_version":"2.0"}' });
+    expect(validateBody.files).toEqual({
+      'project.json': '{"format_version":"2.0"}',
+    });
     expect(previewBody).toMatchObject({
       deleteUnmatched: false,
       files: { 'project.json': '{"format_version":"2.0"}' },
@@ -97,7 +136,10 @@ describe('platformValidatePackage', () => {
       importPreview: {
         canApply: boolean;
         acknowledgementReady: boolean;
-        suggestedApplyArgs: { previewDigest: string; acknowledgedIssueIds: string[] };
+        suggestedApplyArgs: {
+          previewDigest: string;
+          acknowledgedIssueIds: string[];
+        };
       };
     };
 

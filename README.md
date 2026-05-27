@@ -68,13 +68,13 @@ Arch generates eval assets, runs eval workflows, and reads CI evidence.
 
 Arch validates packages, inspects compiler-visible models, and drives repair loops.
 
-| Tool                          | Description                                                |
-| ----------------------------- | ---------------------------------------------------------- |
-| `platform_validate_package`   | Validate a local package and optional import preview       |
-| `platform_package_model`      | Show compiler-visible agents, tools, refs, and diagnostics |
-| `debug_lint_abl`              | Run ABL repair and design lint checks                      |
-| `debug_why_transcript_failed` | Correlate transcript symptoms with ABL file/line causes    |
-| `debug_diagnose_transcript`   | Alias for transcript failure diagnosis                     |
+| Tool                          | Description                                                             |
+| ----------------------------- | ----------------------------------------------------------------------- |
+| `platform_validate_package`   | Validate a local package and optional import preview                    |
+| `platform_package_model`      | Show compiler-visible agents, tools, constraints, refs, and diagnostics |
+| `debug_lint_abl`              | Run ABL repair and design lint checks                                   |
+| `debug_why_transcript_failed` | Correlate transcript symptoms with ABL file/line causes                 |
+| `debug_diagnose_transcript`   | Alias for transcript failure diagnosis                                  |
 
 ### Arch Debug
 

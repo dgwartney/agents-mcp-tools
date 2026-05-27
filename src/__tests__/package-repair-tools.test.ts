@@ -36,7 +36,9 @@ describe('package repair MCP tools', () => {
       },
     };
 
-    expect(JSON.parse(await debugLintAbl({ data }, ctx))).toMatchObject({ success: true });
+    expect(JSON.parse(await debugLintAbl({ data }, ctx))).toMatchObject({
+      success: true,
+    });
     expect(JSON.parse(await platformPackageModel({ data }, ctx))).toMatchObject({ success: true });
     expect(
       JSON.parse(
@@ -75,6 +77,69 @@ describe('package repair MCP tools', () => {
         'agents/support.agent.abl': 'AGENT: Support\nGOAL: "Help"',
       });
     }
+  });
+
+  it('promotes package model constraint observability to the MCP response top level', async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        success: true,
+        model: {
+          agents: [],
+          constraintObservability: {
+            rawConstraints: 2,
+            parsedConstraints: 0,
+            compiledRuntimeConstraints: 0,
+          },
+          structuralSummary: {
+            totals: {
+              agents: 1,
+              rawVsCompiledMismatches: 1,
+            },
+            rawVsCompiledMismatches: [
+              {
+                agent: 'Support',
+                area: 'constraints',
+                raw: 2,
+                parsed: 0,
+                compiled: 0,
+              },
+            ],
+          },
+        },
+      }),
+    );
+
+    const result = JSON.parse(
+      await platformPackageModel(
+        {
+          files: {
+            'agents/support.agent.abl': 'AGENT: Support\nGOAL: "Help"',
+          },
+        },
+        ctx,
+      ),
+    ) as {
+      constraintObservability: {
+        rawConstraints: number;
+        parsedConstraints: number;
+        compiledRuntimeConstraints: number;
+      };
+      structuralSummary: {
+        totals: { agents: number; rawVsCompiledMismatches: number };
+      };
+    };
+
+    expect(result.constraintObservability).toEqual({
+      rawConstraints: 2,
+      parsedConstraints: 0,
+      compiledRuntimeConstraints: 0,
+    });
+    expect(result.structuralSummary).toMatchObject({
+      totals: {
+        agents: 1,
+        rawVsCompiledMismatches: 1,
+      },
+    });
   });
 });
 

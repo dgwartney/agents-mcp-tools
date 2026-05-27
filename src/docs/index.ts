@@ -126,12 +126,29 @@ Use platform_package_model for:
 - memory variables
 - behavior profile references
 - compiled flow steps
+- constraint observability: raw constraint bullets, parsed constraint AST, inert parser warnings, compiled IR constraints, and runtime-check phases
 - unresolved references
-- compiler diagnostics`,
+- compiler diagnostics
+
+Constraint contract facts surfaced by package model and validation:
+- rawConstraints counts authored CONSTRAINTS bullets.
+- parsedConstraints counts only REQUIRE/WARN/LIMIT/RESTRICT entries parsed into the AST.
+- inertConstraintWarnings identifies plain CONSTRAINTS bullets that are ignored by the constraints compiler.
+- compiledRuntimeConstraints counts entries that reached compiled ir.constraints.constraints.
+- phaseSemantics.labelsOnly is true: always: and named phases are readability labels today, not lifecycle hooks.
+- runtimeChecks shows the semantic runtime surfaces: state-context checks, before_tool_call checkpoints, before_response checkpoints, and after_tool_result checks.
+
+Tool contract facts:
+- side_effects plus confirmation controls user approval flow; it is not an authorization policy.
+- identity_tier_required is the current identity gate. Generic tool requires/effects authorization policy is not modeled here.`,
 };
 
 export const DOC_TOPICS: EmbeddedDocTopic[] = [
-  { id: 'mcp/platform-contract', title: 'MCP Platform Contract', category: 'MCP Fallback' },
+  {
+    id: 'mcp/platform-contract',
+    title: 'MCP Platform Contract',
+    category: 'MCP Fallback',
+  },
   {
     id: 'mcp/import-contract',
     title: 'Import Preview and Apply Contract',
