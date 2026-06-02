@@ -4,25 +4,33 @@
  * Builds hierarchical span trees from trace events for execution flow visualization.
  */
 
-import type { TraceEventWithId, SpanNode, TraceEventType } from '../types.js';
+import type { TraceEventWithId, SpanNode, TraceEventType } from "../types.js";
+import {
+  compareTraceEventsChronologically,
+  safeTimeMs,
+} from "../utils/trace-formatting.js";
 
 // Events that start a span
 const SPAN_START_EVENTS: TraceEventType[] = [
-  'agent_enter',
-  'flow_step_enter',
-  'delegate_start',
-  'llm_call',
-  'tool_call',
+  "agent_enter",
+  "flow_step_enter",
+  "delegate_start",
+  "llm_call",
+  "tool_call",
 ];
 
 // Events that end a span
-const SPAN_END_EVENTS: TraceEventType[] = ['agent_exit', 'flow_step_exit', 'delegate_complete'];
+const SPAN_END_EVENTS: TraceEventType[] = [
+  "agent_exit",
+  "flow_step_exit",
+  "delegate_complete",
+];
 
 // Mapping of start -> end event types
 const SPAN_PAIRS: Record<string, TraceEventType> = {
-  agent_enter: 'agent_exit',
-  flow_step_enter: 'flow_step_exit',
-  delegate_start: 'delegate_complete',
+  agent_enter: "agent_exit",
+  flow_step_enter: "flow_step_exit",
+  delegate_start: "delegate_complete",
 };
 
 export class SpanBuilder {
@@ -31,9 +39,7 @@ export class SpanBuilder {
    */
   buildTree(events: TraceEventWithId[]): SpanNode[] {
     // Sort events by timestamp
-    const sortedEvents = [...events].sort(
-      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
-    );
+    const sortedEvents = [...events].sort(compareTraceEventsChronologically);
 
     const rootNodes: SpanNode[] = [];
     const spanMap = new Map<string, SpanNode>();
@@ -69,8 +75,13 @@ export class SpanBuilder {
         // Close the span
         const node = spanMap.get(event.spanId);
         if (node) {
-          node.endTime = new Date(event.timestamp);
-          node.durationMs = event.durationMs ?? node.endTime.getTime() - node.startTime.getTime();
+          const endTime = safeTimeMs(event.timestamp);
+          if (endTime !== null) {
+            node.endTime = new Date(endTime);
+          }
+          node.durationMs =
+            safeDurationMs(event.durationMs) ??
+            calculateDurationMs(node.startTime, node.endTime);
 
           // Merge end event data
           Object.assign(node.data, event.data);
@@ -100,12 +111,13 @@ export class SpanBuilder {
    * Create a span node from an event
    */
   private createNodeFromEvent(event: TraceEventWithId): SpanNode {
+    const startTime = safeTimeMs(event.timestamp);
     return {
       id: event.spanId || event.id,
       name: this.getSpanName(event),
       type: event.type,
-      startTime: new Date(event.timestamp),
-      durationMs: event.durationMs,
+      startTime: new Date(startTime ?? Number.NaN),
+      durationMs: safeDurationMs(event.durationMs),
       data: { ...event.data },
       children: [],
       parentId: event.parentSpanId,
@@ -117,45 +129,45 @@ export class SpanBuilder {
    */
   private getSpanName(event: TraceEventWithId): string {
     switch (event.type) {
-      case 'agent_enter':
-      case 'agent_exit':
-        return `Agent: ${event.agentName || event.data.agentName || 'unknown'}`;
+      case "agent_enter":
+      case "agent_exit":
+        return `Agent: ${event.agentName || event.data.agentName || "unknown"}`;
 
-      case 'flow_step_enter':
-      case 'flow_step_exit':
-        return `Step: ${event.data.step || event.data.stepName || 'unknown'}`;
+      case "flow_step_enter":
+      case "flow_step_exit":
+        return `Step: ${event.data.step || event.data.stepName || "unknown"}`;
 
-      case 'delegate_start':
-      case 'delegate_complete':
-        return `Delegate: ${event.data.agent || event.data.targetAgent || 'unknown'}`;
+      case "delegate_start":
+      case "delegate_complete":
+        return `Delegate: ${event.data.agent || event.data.targetAgent || "unknown"}`;
 
-      case 'llm_call':
-        return `LLM: ${event.data.model || 'unknown'}`;
+      case "llm_call":
+        return `LLM: ${event.data.model || "unknown"}`;
 
-      case 'tool_call':
-        return `Tool: ${event.data.tool || event.data.toolName || 'unknown'}`;
+      case "tool_call":
+        return `Tool: ${event.data.tool || event.data.toolName || "unknown"}`;
 
-      case 'decision':
-        return `Decision: ${event.data.decision || 'unknown'}`;
+      case "decision":
+        return `Decision: ${event.data.decision || "unknown"}`;
 
-      case 'constraint_check':
-        return `Constraint: ${event.data.constraint || 'check'}`;
+      case "constraint_check":
+        return `Constraint: ${event.data.constraint || "check"}`;
 
-      case 'handoff':
-        return `Handoff: ${event.data.to || event.data.target || 'unknown'}`;
+      case "handoff":
+        return `Handoff: ${event.data.to || event.data.target || "unknown"}`;
 
-      case 'escalation':
-        return `Escalation: ${event.data.reason || 'triggered'}`;
+      case "escalation":
+        return `Escalation: ${event.data.reason || "triggered"}`;
 
-      case 'error':
-        return `Error: ${event.data.errorType || event.data.message || 'unknown'}`;
+      case "error":
+        return `Error: ${event.data.errorType || event.data.message || "unknown"}`;
 
-      case 'flow_transition':
-        return `Transition: ${event.data.from || '?'} -> ${event.data.to || '?'}`;
+      case "flow_transition":
+        return `Transition: ${event.data.from || "?"} -> ${event.data.to || "?"}`;
 
       default:
-        if (event.type.startsWith('dsl_')) {
-          return `DSL: ${event.type.replace('dsl_', '')}`;
+        if (event.type.startsWith("dsl_")) {
+          return `DSL: ${event.type.replace("dsl_", "")}`;
         }
         return event.type;
     }
@@ -205,4 +217,21 @@ export class SpanBuilder {
     visit(tree, 1);
     return { totalSpans, maxDepth, totalDurationMs, byType };
   }
+}
+
+function safeDurationMs(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value)
+    ? value
+    : undefined;
+}
+
+function calculateDurationMs(
+  startTime: Date,
+  endTime?: Date,
+): number | undefined {
+  const start = safeTimeMs(startTime);
+  const end = safeTimeMs(endTime);
+  if (start === null || end === null) return undefined;
+  const duration = end - start;
+  return Number.isFinite(duration) ? duration : undefined;
 }

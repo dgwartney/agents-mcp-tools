@@ -5,10 +5,11 @@
  * Enables external observation of agent sessions without loading them directly.
  */
 
-import { z } from 'zod';
-import type { DebugContext } from './index.js';
-import type { TraceEventWithId, SessionInfo } from '../types.js';
-import { ARCH_MCP_LOG_PREFIX } from './persona.js';
+import { z } from "zod";
+import type { DebugContext } from "./index.js";
+import type { TraceEventWithId, SessionInfo } from "../types.js";
+import { ARCH_MCP_LOG_PREFIX } from "./persona.js";
+import { safeIsoTimestamp } from "../utils/trace-formatting.js";
 
 // =============================================================================
 // SCHEMAS
@@ -18,12 +19,14 @@ export const listActiveSessionsSchema = z.object({});
 
 export const sessionSchema = z.object({
   action: z
-    .enum(['subscribe', 'unsubscribe'])
-    .describe("Action to perform: 'subscribe' to start receiving traces, 'unsubscribe' to stop"),
+    .enum(["subscribe", "unsubscribe"])
+    .describe(
+      "Action to perform: 'subscribe' to start receiving traces, 'unsubscribe' to stop",
+    ),
   sessionId: z
     .string()
     .describe(
-      'The session ID to subscribe to or unsubscribe from (get from debug_list_active_sessions)',
+      "The session ID to subscribe to or unsubscribe from (get from debug_list_active_sessions)",
     ),
 });
 
@@ -48,7 +51,7 @@ export async function listActiveSessions(
   if (!ctx.wsClient.isConnected()) {
     return JSON.stringify({
       success: false,
-      error: 'Not connected to server. Call platform_connect first.',
+      error: "Not connected to server. Call platform_connect first.",
     });
   }
 
@@ -58,7 +61,7 @@ export async function listActiveSessions(
       resolve(
         JSON.stringify({
           success: false,
-          error: 'Timeout waiting for session list',
+          error: "Timeout waiting for session list",
         }),
       );
     }, 5000);
@@ -73,9 +76,9 @@ export async function listActiveSessions(
           count: sessions.length,
           sessions: sessions.map((s) => ({
             sessionId: s.sessionId,
-            agentName: s.agentName || 'unknown',
+            agentName: s.agentName || "unknown",
             eventCount: s.eventCount,
-            lastActivity: s.lastActivity,
+            lastActivity: safeIsoTimestamp(s.lastActivity),
           })),
         }),
       );
@@ -88,8 +91,11 @@ export async function listActiveSessions(
 /**
  * Unified session subscribe/unsubscribe handler
  */
-export async function session(args: SessionArgs, ctx: DebugContext): Promise<string> {
-  if (args.action === 'subscribe') {
+export async function session(
+  args: SessionArgs,
+  ctx: DebugContext,
+): Promise<string> {
+  if (args.action === "subscribe") {
     return subscribeSession(args.sessionId, ctx);
   }
   return unsubscribeSession(args.sessionId, ctx);
@@ -99,11 +105,14 @@ export async function session(args: SessionArgs, ctx: DebugContext): Promise<str
  * Subscribe to a session's traces
  * Receives buffered events immediately, then live events as they occur
  */
-async function subscribeSession(sessionId: string, ctx: DebugContext): Promise<string> {
+async function subscribeSession(
+  sessionId: string,
+  ctx: DebugContext,
+): Promise<string> {
   if (!ctx.wsClient.isConnected()) {
     return JSON.stringify({
       success: false,
-      error: 'Not connected to server. Call platform_connect first.',
+      error: "Not connected to server. Call platform_connect first.",
     });
   }
 
@@ -113,7 +122,7 @@ async function subscribeSession(sessionId: string, ctx: DebugContext): Promise<s
       resolve(
         JSON.stringify({
           success: false,
-          error: 'Timeout waiting for subscription confirmation',
+          error: "Timeout waiting for subscription confirmation",
         }),
       );
     }, 5000);
@@ -154,7 +163,7 @@ async function subscribeSession(sessionId: string, ctx: DebugContext): Promise<s
         eventCount = count;
 
         // Set up the session in the session store for tracking
-        ctx.sessionStore.createSession(sessionId, 'subscribed');
+        ctx.sessionStore.createSession(sessionId, "subscribed");
         ctx.sessionStore.setActiveSession(sessionId);
 
         resolve(
@@ -167,7 +176,7 @@ async function subscribeSession(sessionId: string, ctx: DebugContext): Promise<s
               id: e.id,
               type: e.type,
               agentName: e.agentName,
-              timestamp: e.timestamp,
+              timestamp: safeIsoTimestamp(e.timestamp),
             })),
             hasMore: replayEvents.length > 10,
           }),
@@ -194,11 +203,14 @@ async function subscribeSession(sessionId: string, ctx: DebugContext): Promise<s
 /**
  * Unsubscribe from a session
  */
-async function unsubscribeSession(sessionId: string, ctx: DebugContext): Promise<string> {
+async function unsubscribeSession(
+  sessionId: string,
+  ctx: DebugContext,
+): Promise<string> {
   if (!ctx.wsClient.isConnected()) {
     return JSON.stringify({
       success: false,
-      error: 'Not connected to server. Call platform_connect first.',
+      error: "Not connected to server. Call platform_connect first.",
     });
   }
 
@@ -209,7 +221,7 @@ async function unsubscribeSession(sessionId: string, ctx: DebugContext): Promise
         JSON.stringify({
           success: false,
           sessionId,
-          error: 'Timeout waiting for unsubscribe confirmation',
+          error: "Timeout waiting for unsubscribe confirmation",
         }),
       );
     }, 2000);
@@ -223,7 +235,7 @@ async function unsubscribeSession(sessionId: string, ctx: DebugContext): Promise
           JSON.stringify({
             success: true,
             sessionId,
-            message: 'Successfully unsubscribed from session',
+            message: "Successfully unsubscribed from session",
           }),
         );
       }

@@ -4,34 +4,60 @@
  * Get hierarchical span tree for execution flow visualization.
  */
 
-import { z } from 'zod';
-import type { DebugContext } from './index.js';
-import { SpanBuilder } from '../store/span-builder.js';
+import { z } from "zod";
+import type { DebugContext } from "./index.js";
+import { SpanBuilder } from "../store/span-builder.js";
+import {
+  evidenceMessage,
+  formatEvidenceDiagnostics,
+  loadSessionEvidence,
+} from "../utils/session-evidence.js";
+import { safeIsoTimestamp } from "../utils/trace-formatting.js";
 
 export const getSpanTreeSchema = z.object({
-  sessionId: z.string().optional().describe('Session ID (uses active session if not specified)'),
+  sessionId: z
+    .string()
+    .optional()
+    .describe("Session ID (uses active session if not specified)"),
+  projectId: z
+    .string()
+    .optional()
+    .describe(
+      "Project ID for persisted Studio/UI sessions (enables runtime proxy fallback)",
+    ),
   flat: z
     .boolean()
     .optional()
     .default(false)
-    .describe('Return as flat list with depth info instead of tree'),
+    .describe("Return as flat list with depth info instead of tree"),
 });
 
 export type GetSpanTreeArgs = z.infer<typeof getSpanTreeSchema>;
 
-export async function getSpanTree(args: GetSpanTreeArgs, ctx: DebugContext): Promise<string> {
-  // Use active session if not specified
-  const sessionId = args.sessionId || ctx.sessionStore.getActiveSessionId();
+export async function getSpanTree(
+  args: GetSpanTreeArgs,
+  ctx: DebugContext,
+): Promise<string> {
+  const evidenceResult = await loadSessionEvidence(ctx, {
+    sessionId: args.sessionId,
+    projectId: args.projectId,
+    traceLimit: 500,
+    preferRuntime: Boolean(args.projectId),
+  });
 
-  if (!sessionId) {
+  if (!evidenceResult.ok) {
     return JSON.stringify({
       success: false,
-      error: 'No session specified and no active session. Load an agent first.',
+      sessionId: evidenceResult.sessionId,
+      error: evidenceResult.error,
+      hint: evidenceResult.hint,
+      diagnostics: evidenceResult.diagnostics,
     });
   }
 
-  // Get events for the session
-  const events = ctx.traceStore.getBySession(sessionId);
+  const evidence = evidenceResult.evidence;
+  const sessionId = evidence.sessionId;
+  const events = evidence.events;
 
   if (events.length === 0) {
     return JSON.stringify({
@@ -44,7 +70,10 @@ export async function getSpanTree(args: GetSpanTreeArgs, ctx: DebugContext): Pro
         totalDurationMs: 0,
         byType: {},
       },
-      message: 'No trace events yet. Send a message to the agent to generate traces.',
+      evidence: formatEvidenceDiagnostics(evidence),
+      message:
+        evidenceMessage(evidence) ||
+        "No trace events yet. Send a message to the agent to generate traces.",
     });
   }
 
@@ -59,14 +88,15 @@ export async function getSpanTree(args: GetSpanTreeArgs, ctx: DebugContext): Pro
     return JSON.stringify({
       success: true,
       sessionId,
-      format: 'flat',
+      format: "flat",
+      evidence: formatEvidenceDiagnostics(evidence),
       spans: flatList.map((node) => ({
         id: node.id,
         name: node.name,
         type: node.type,
         depth: node.data._depth,
-        startTime: node.startTime,
-        endTime: node.endTime,
+        startTime: safeIsoTimestamp(node.startTime),
+        endTime: node.endTime ? safeIsoTimestamp(node.endTime) : undefined,
         durationMs: node.durationMs,
         parentId: node.parentId,
       })),
@@ -80,8 +110,8 @@ export async function getSpanTree(args: GetSpanTreeArgs, ctx: DebugContext): Pro
       id: node.id,
       name: node.name,
       type: node.type,
-      startTime: node.startTime,
-      endTime: node.endTime,
+      startTime: safeIsoTimestamp(node.startTime),
+      endTime: node.endTime ? safeIsoTimestamp(node.endTime) : undefined,
       durationMs: node.durationMs,
       children: formatTree(node.children),
     }));
@@ -89,7 +119,8 @@ export async function getSpanTree(args: GetSpanTreeArgs, ctx: DebugContext): Pro
   return JSON.stringify({
     success: true,
     sessionId,
-    format: 'tree',
+    format: "tree",
+    evidence: formatEvidenceDiagnostics(evidence),
     tree: formatTree(tree),
     stats,
   });
