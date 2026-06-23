@@ -1,6 +1,8 @@
 import { Command } from 'commander';
-import { readCliState, writeCliState, activeStatePath } from '../state.js';
+import { readCliState, writeCliState, activeStatePath, globalStatePath } from '../state.js';
 import { printResult } from '../output.js';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 
 export function registerContextCommands(program: Command): void {
   const ctx = program.command('context').description('Manage saved CLI context (project ID, session ID)');
@@ -9,8 +11,24 @@ export function registerContextCommands(program: Command): void {
     .description('Display active state file path and current values')
     .option('--global', 'Show global state file', false)
     .action((opts) => {
-      const path = activeStatePath(opts.global);
       const state = readCliState();
+      let path: string;
+      if (opts.global) {
+        path = globalStatePath();
+      } else {
+        // Walk up to find the local state file that readCliState() would have used
+        const localCandidate = join(process.cwd(), '.arch/state.json');
+        const gPath = globalStatePath();
+        // Use the same resolution order as readCliState(): local first, then global
+        if (existsSync(localCandidate)) {
+          path = localCandidate;
+        } else if (existsSync(gPath)) {
+          path = gPath;
+        } else {
+          // Neither exists; show where local would be written
+          path = activeStatePath(false);
+        }
+      }
       printResult(JSON.stringify({ path, state }, null, 2));
     });
 

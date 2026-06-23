@@ -414,6 +414,13 @@ Correlate transcript failures with ABL diagnoses.
 
 ---
 
+### debug_diagnose_transcript
+Alias for `debug_why_transcript_failed`. Accepts identical parameters.
+
+**CLI:** `arch debug why-transcript-failed` (CLI exposes this via the canonical command)
+
+---
+
 ## Environment Variables
 
 | Variable | Description | Example |

@@ -47,7 +47,6 @@ export function registerDebugCommands(program: Command, ctx: Ctx): void {
   program.command('list-agents')
     .description('List all available agents')
     .option('--domain <domain>', 'Filter by domain')
-    .option('--project-id <id>', 'Project ID')
     .action((opts) => {
       run(() => listAgents({ domain: opts.domain }, ctx));
     });
@@ -305,7 +304,7 @@ export function registerDebugCommands(program: Command, ctx: Ctx): void {
     .option('--filter <regex>', 'Regex filter for log lines')
     .option('--tail <n>', 'Last N lines', parseInt)
     .action((opts) => {
-      run(() => (harnessLogs as (a: unknown, c: unknown) => Promise<string>)({
+      run(() => harnessLogs({
         execution_id: opts.executionId,
         run_sequence: opts.runSequence,
         stage_id: opts.stageId,
@@ -313,7 +312,7 @@ export function registerDebugCommands(program: Command, ctx: Ctx): void {
         pipeline_id: opts.pipelineId,
         filter: opts.filter,
         tail: opts.tail,
-      }, ctx));
+      }));
     });
 
   // ── diagnose ──────────────────────────────────────────────────────────────

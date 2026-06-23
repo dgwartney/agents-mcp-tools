@@ -499,7 +499,6 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
   program.command('package-model')
     .description('Show compiler model for a local package')
     .option('--path <path>', 'Local folder or .zip path')
-    .option('--project-id <id>', 'Project ID')
     .action((opts) => {
       run(() => platformPackageModel({ path: opts.path }, ctx));
     });

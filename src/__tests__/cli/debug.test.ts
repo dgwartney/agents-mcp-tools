@@ -224,7 +224,6 @@ describe('debug commands', () => {
     await runCli(['harness-logs', '--execution-id', 'exec1', '--run-sequence', '3', '--stage-id', 'build', '--step-id', 'test']);
     expect(harnessLogs).toHaveBeenCalledWith(
       expect.objectContaining({ execution_id: 'exec1', run_sequence: 3, stage_id: 'build', step_id: 'test' }),
-      expect.any(Object),
     );
   });
 });
