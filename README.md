@@ -4,12 +4,37 @@ Arch is the personified Agent Platform MCP operator for Build, Evaluate, Optimiz
 
 ## Install
 
+Build from source and link globally — the package is not published to the npm registry.
+
+```bash
+git clone git@github.com:dgwartney/agents-mcp-tools.git
+cd agents-mcp-tools
+npm install
+npm run build
+npm link
+```
+
+`npm link` registers both binaries as global commands:
+- **`arch`** — the direct CLI (see [CLI Usage](#arch-cli) below)
+- **`agents-mcp-tools`** — the MCP server for Claude Code and other MCP clients
+
+**To update** after pulling changes:
+
+```bash
+cd agents-mcp-tools
+git pull
+npm run build   # npm link only needs to run once
+```
+
+### MCP Server Configuration
+
+After running `npm link`, add this to your project's `.mcp.json` or `~/.claude/settings.json`:
+
 ```json
 {
   "mcpServers": {
     "arch-agent-platform": {
-      "command": "npx",
-      "args": ["@koredotcom/agents-mcp-tools"],
+      "command": "agents-mcp-tools",
       "env": {
         "AGENTS_URL": "https://agents.kore.ai"
       }
@@ -18,9 +43,17 @@ Arch is the personified Agent Platform MCP operator for Build, Evaluate, Optimiz
 }
 ```
 
-Add this to your project's `.mcp.json` or `~/.claude/settings.json`.
-
 Existing configs that use an MCP server key like `agent-platform-debug` can keep that key; the key is local client configuration.
+
+### `arch` CLI
+
+The `arch` binary is also available after `npm link`. See [TUTORIAL.md](TUTORIAL.md) for a full walkthrough and [USER-GUIDE.md](USER-GUIDE.md) for command reference.
+
+```bash
+arch --help
+arch platform connect
+arch platform projects list
+```
 
 ### Environment URLs
 
