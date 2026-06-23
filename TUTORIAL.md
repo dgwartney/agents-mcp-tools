@@ -573,23 +573,10 @@ HANDOFF:
       summary: "User wants to make a reservation"
     RETURN: false
 
-ESCALATE:
-  triggers:
-    - WHEN: routing_failures >= 3
-      REASON: "Unable to determine user intent after multiple attempts"
-      PRIORITY: medium
-
-  context_for_human:
-    - conversation_history
-
 ON_ERROR:
   routing_failure:
     RESPOND: "I want to make sure I connect you with the right specialist. Are you looking to search for hotels, or do you already know which hotel you'd like to book?"
     RETRY: 1
-
-COMPLETE:
-  - WHEN: handoff_successful == true
-    RESPOND: "I've connected you with the right specialist. They have your full context."
 ```
 
 Commit:
