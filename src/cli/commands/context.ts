@@ -50,11 +50,22 @@ export function registerContextCommands(program: Command): void {
       console.log(`Saved sessionId="${opts.sessionId}" to ${activeStatePath(opts.global)}`);
     });
 
+  ctx.command('set-workspace')
+    .description('Save a default workspace (tenant)')
+    .requiredOption('--tenant-id <id>', 'Tenant ID to save')
+    .option('--workspace-name <name>', 'Workspace display name')
+    .option('--global', 'Write to global state file', false)
+    .action((opts) => {
+      writeCliState({ tenantId: opts.tenantId, workspaceName: opts.workspaceName }, opts.global);
+      const label = opts.workspaceName ? `"${opts.workspaceName}" (${opts.tenantId})` : opts.tenantId;
+      console.log(`Saved workspace ${label} to ${activeStatePath(opts.global)}`);
+    });
+
   ctx.command('clear')
-    .description('Clear saved project ID and session ID')
+    .description('Clear saved project ID, session ID, and workspace')
     .option('--global', 'Clear global state file', false)
     .action((opts) => {
-      writeCliState({ projectId: undefined, sessionId: undefined }, opts.global);
+      writeCliState({ projectId: undefined, sessionId: undefined, tenantId: undefined, workspaceName: undefined }, opts.global);
       console.log(`Cleared context in ${activeStatePath(opts.global)}`);
     });
 }

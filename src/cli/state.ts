@@ -6,6 +6,8 @@ export interface CliState {
   projectId?: string;
   sessionId?: string;
   serverUrl?: string;
+  tenantId?: string;
+  workspaceName?: string;
 }
 
 const LOCAL_STATE_FILE = '.arch/state.json';

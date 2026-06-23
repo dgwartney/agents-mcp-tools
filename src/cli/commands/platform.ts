@@ -63,12 +63,23 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
           force: opts.force,
           deviceCode: opts.deviceCode,
         }, ctx);
-        // On successful connect, persist the server URL so future commands
-        // in this directory don't need AGENTS_URL set in the environment.
+        // On successful connect, persist the server URL and workspace info.
         try {
           const parsed = JSON.parse(result) as { success?: boolean; serverUrl?: string };
           if (parsed.success && parsed.serverUrl) {
-            writeCliState({ serverUrl: parsed.serverUrl });
+            const patch: Parameters<typeof writeCliState>[0] = { serverUrl: parsed.serverUrl };
+            // Decode JWT to extract tenantId (no API call needed)
+            const token = ctx.httpClient.getAuthToken();
+            if (token) {
+              const parts = token.split('.');
+              if (parts.length === 3) {
+                try {
+                  const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString()) as Record<string, unknown>;
+                  if (payload.tenantId) patch.tenantId = payload.tenantId as string;
+                } catch { /* malformed JWT */ }
+              }
+            }
+            writeCliState(patch);
           }
         } catch { /* ignore parse errors */ }
         return result;
@@ -471,12 +482,38 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
 
   workspaces.command('current')
     .description('Show the current active workspace')
-    .action(() => run(() => platformWorkspaces({ action: 'current' }, ctx)));
+    .action(() => {
+      const handler = async (): Promise<string> => {
+        const result = await platformWorkspaces({ action: 'current' }, ctx);
+        // Save workspace info to context whenever it is resolved
+        try {
+          const parsed = JSON.parse(result) as { success?: boolean; tenantId?: string; workspaceName?: string };
+          if (parsed.success && parsed.tenantId) {
+            writeCliState({ tenantId: parsed.tenantId, workspaceName: parsed.workspaceName ?? undefined });
+          }
+        } catch { /* ignore */ }
+        return result;
+      };
+      run(handler);
+    });
 
   workspaces.command('switch')
     .description('Switch to a different workspace')
     .option('--tenant-id <id>', 'Tenant ID')
-    .action((opts) => run(() => platformWorkspaces({ action: 'switch', tenantId: opts.tenantId }, ctx)));
+    .action((opts) => {
+      const handler = async (): Promise<string> => {
+        const result = await platformWorkspaces({ action: 'switch', tenantId: opts.tenantId }, ctx);
+        // Persist the new workspace to context
+        try {
+          const parsed = JSON.parse(result) as { success?: boolean; tenantId?: string; workspaceName?: string };
+          if (parsed.success && parsed.tenantId) {
+            writeCliState({ tenantId: parsed.tenantId, workspaceName: parsed.workspaceName ?? undefined });
+          }
+        } catch { /* ignore */ }
+        return result;
+      };
+      run(handler);
+    });
 
   // ── import-export ─────────────────────────────────────────────────────────
   const importExport = program.command('import-export').description('Import and export projects');
