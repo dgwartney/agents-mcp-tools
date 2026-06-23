@@ -235,18 +235,23 @@ git commit -m "feat: add hotels API tool specifications"
 
 ### Step 5b — Register tools in the Project Tool Library
 
-The HTTP implementation (`endpoint`, `method`, `auth`) must be configured in the **Project Tool Library** via the Studio UI or API. Agent DSL files declare only the tool interface (signature + description).
+The HTTP implementation (`endpoint`, `method`, `auth`) must be in the **Project Tool Library**. The `import-abl` command reads the `.tools.abl` specification file and creates all tools automatically:
 
-Open the Studio for your project and create each tool in the Tool Library:
+```bash
+# Preview what will be created (no changes made)
+agentcl platform tools import-abl --file tools/hotels-api.tools.abl --dry-run
 
-| Tool | Method | Endpoint |
-|---|---|---|
-| `search_hotels` | POST | `/hotels/search` |
-| `get_hotel` | GET | `/hotels/{hotel_id}` |
-| `check_availability` | POST | `/hotels/{hotel_id}/availability` |
-| `book_hotel` | POST | `/hotels/bookings` |
+# Create all tools in the Tool Library
+agentcl platform tools import-abl --file tools/hotels-api.tools.abl
+```
 
-Set the base URL to your Hotels API (`https://api.example-hotels.com/v1`) and configure API key authentication for each tool.
+Verify all four tools were registered:
+
+```bash
+agentcl platform tools list
+```
+
+You should see `search_hotels`, `get_hotel`, `check_availability`, and `book_hotel` each with `toolType: "http"`.
 
 > **Why this separation?** Agent DSL files are version-controlled and portable. Tool implementations contain environment-specific configuration (URLs, auth) that differs between staging and production. Keeping them in the Tool Library lets you point the same agent at different backends per environment without changing the DSL.
 
