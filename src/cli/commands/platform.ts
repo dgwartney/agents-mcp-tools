@@ -565,30 +565,39 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
         if (opts.dryRun) {
           return JSON.stringify({ success: true, dryRun: true, wouldCreate: toolDefs.map(t => t.name) }, null, 2);
         }
+        // Fetch existing tools once so we can upsert (update if exists, create if not)
+        let existingTools: Record<string, string> = {};
+        try {
+          const listResult = await platformTools({ action: 'list', projectId }, ctx);
+          const listParsed = JSON.parse(listResult) as { data?: { data?: { name: string; id: string }[] } };
+          for (const t of listParsed.data?.data ?? []) {
+            if (t.name && t.id) existingTools[t.name] = t.id;
+          }
+        } catch { /* proceed without existing list */ }
+
+        const definition = (tool: ToolAblDef) => ({
+          toolType: 'http',
+          description: tool.description,
+          endpoint: tool.endpoint,
+          method: tool.method,
+          ...(tool.auth ? { auth: tool.auth } : {}),
+        });
+
         const results: Record<string, unknown>[] = [];
         for (const tool of toolDefs) {
           try {
-            const result = await platformTools({
-              action: 'create',
-              projectId,
-              name: tool.name,
-              type: 'http',
-              definition: {
-                toolType: 'http',
-                description: tool.description,
-                endpoint: tool.endpoint,
-                method: tool.method,
-                ...(tool.auth ? { auth: tool.auth } : {}),
-              },
-            }, ctx);
+            const existingId = existingTools[tool.name];
+            const result = existingId
+              ? await platformTools({ action: 'update', projectId, toolId: existingId, name: tool.name, definition: definition(tool) }, ctx)
+              : await platformTools({ action: 'create', projectId, name: tool.name, type: 'http', definition: definition(tool) }, ctx);
             const parsed = JSON.parse(result) as { success?: boolean };
-            results.push({ name: tool.name, success: parsed.success ?? false });
+            results.push({ name: tool.name, action: existingId ? 'updated' : 'created', success: parsed.success ?? false });
           } catch (err) {
             results.push({ name: tool.name, success: false, error: err instanceof Error ? err.message : String(err) });
           }
         }
         const allOk = results.every(r => r.success);
-        return JSON.stringify({ success: allOk, created: results }, null, 2);
+        return JSON.stringify({ success: allOk, tools: results }, null, 2);
       };
       run(handler);
     });
