@@ -261,6 +261,14 @@ BEHAVIOR:
   allowedDirectActions: [greet, clarify_intent, answer_faq]
   forbiddenActions: [search_hotels, book_hotel]
 
+ON_START:
+  RESPOND: |
+    Welcome! I'm your hotel booking assistant. I can help you:
+    - 🔍 Search and compare hotels by destination and dates
+    - 📅 Book a room and confirm your reservation
+
+    What would you like to do today?
+
 HANDOFF:
   - TO: hotel_search
     WHEN: intent.category IN ["hotel_search", "browse", "compare"]
