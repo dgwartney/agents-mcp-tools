@@ -7,7 +7,8 @@
   "main": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",
   "bin": {
-    "agents-mcp-tools": "./dist/bin/mcp-debug.js"
+    "agents-mcp-tools": "./dist/bin/mcp-debug.js",
+    "arch": "./dist/bin/arch.js"
   },
   "exports": {
     ".": {
@@ -43,10 +44,12 @@
     "test:fast": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "arch": "node dist/bin/arch.js",
     "prepublishOnly": "pnpm run clean && pnpm run build && pnpm run test"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
+    "commander": "^12.0.0",
     "ws": "^8.16.0",
     "zod": "^3.22.0"
   },
