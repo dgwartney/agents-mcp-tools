@@ -161,9 +161,8 @@ agentcl platform agents list
 # Get agent DSL
 agentcl platform agents get --agent-name booking_agent
 
-# Update agent DSL from a file (agent name inferred from AGENT: declaration)
-agentcl platform agents save-dsl \
-  --dsl-content "$(cat booking_agent.abl)"
+# Upload agent DSL — resolves file: tool imports automatically, name inferred from AGENT: declaration
+agentcl platform agents save-dsl --file booking_agent.abl
 
 # List versions
 agentcl platform versions list --agent-name booking_agent

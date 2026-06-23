@@ -49,11 +49,13 @@ Manage agents within a project.
 |---|---|---|
 | list | `--project-id` | — |
 | get | `--project-id`, `--agent-name` | — |
-| save-dsl | `--project-id`, `--dsl-content` | `--agent-name` (inferred from `AGENT:`/`SUPERVISOR:` declaration if omitted) |
+| save-dsl | `--project-id` | `--file` (recommended), `--dsl-content` (raw), `--agent-name` (inferred from `AGENT:`/`SUPERVISOR:` declaration if omitted) |
 
 **`save-dsl` behaviour:**
+- **`--file <path>`** *(recommended)* — reads the `.abl` file from disk, resolves any `file: "path"` tool import directives by inlining the referenced tools file, then sends the fully self-contained DSL. This is the correct approach when agents reference a separate `.tools.abl` file.
+- **`--dsl-content <text>`** — sends the raw DSL string as-is. Tool `file:` imports are not resolved; use only when the DSL has no external file references.
 - Agent name is read from the first `AGENT: Name` or `SUPERVISOR: Name` line in the DSL — `--agent-name` is optional and rarely needed
-- **Upsert:** if the agent record does not exist on the platform, it is created automatically before the DSL is uploaded; no need to create the agent separately first
+- **Upsert:** if the agent record does not exist on the platform, it is created automatically before the DSL is uploaded
 - The platform enforces that the DSL declaration matches the record name — if `--agent-name` is passed and differs from the DSL declaration, the DSL declaration is used and a warning is printed
 
 ---

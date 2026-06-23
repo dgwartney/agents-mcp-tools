@@ -191,7 +191,7 @@ _agentcl_platform_agents() {
       case $words[1] in
         list)     _arguments '--project-id[Project ID]: : ' '(-h --help)'{-h,--help}'[display help]' ;;
         get)      _arguments '--project-id[Project ID]: : ' '--agent-name[Agent name]: : ' '(-h --help)'{-h,--help}'[display help]' ;;
-        save-dsl) _arguments '--project-id[Project ID]: : ' '--agent-name[Agent name (inferred from DSL if omitted)]: : ' '--dsl-content[DSL content]: : ' '(-h --help)'{-h,--help}'[display help]' ;;
+        save-dsl) _arguments '--project-id[Project ID]: : ' '--agent-name[Agent name (inferred from DSL if omitted)]: : ' '--file[Path to .abl file (resolves tool imports)]:file:_files -g "*.abl"' '--dsl-content[Raw DSL string (no import resolution)]: : ' '(-h --help)'{-h,--help}'[display help]' ;;
       esac
       ;;
   esac
@@ -201,7 +201,7 @@ _agentcl_platform_agents_cmds() {
   local cmds=(
     'list:List agents in the project'
     'get:Get agent details including DSL'
-    'save-dsl:Upload agent DSL (upserts; name inferred from AGENT: declaration)'
+    'save-dsl:Upload agent DSL — use --file to resolve tool imports (upserts; name inferred from AGENT:)'
   )
   _describe 'agents command' cmds
 }
