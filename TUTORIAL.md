@@ -162,9 +162,13 @@ agentcl context show
 
 ---
 
-## Part 5: Define the HTTP Tools
+## Part 5: Define and Register the HTTP Tools
 
-Create a shared tools file that all agents import. This defines the hotel REST API calls.
+The Arch platform enforces a separation between **tool interface** (used in agent DSL) and **tool implementation** (HTTP endpoint, method, auth). The implementation lives in the **Project Tool Library**; the agent DSL only declares the function signature and description.
+
+### Step 5a — Document the tool specifications
+
+Keep a `tools/hotels-api.tools.abl` file in your project as a source-of-truth reference for the full tool specification (including HTTP details). This file is used for local validation with `validate-package` but is **not** uploaded to the platform.
 
 **`tools/hotels-api.tools.abl`**
 
@@ -188,18 +192,12 @@ TOOLS:
     method: POST
     headers:
       X-Api-Key: "{{config.HOTELS_API_KEY}}"
-    hints:
-      cacheable: true
-      latency: medium
 
   get_hotel(hotel_id: string) -> {id: string, name: string, description: string, amenities: string[], rating: number, price_per_night: number}
     description: "Get full details for a specific hotel"
     type: http
     endpoint: "/hotels/{hotel_id}"
     method: GET
-    hints:
-      cacheable: true
-      latency: fast
 
   check_availability(
     hotel_id: string,
@@ -228,21 +226,29 @@ TOOLS:
     confirmation:
       require: always
       immutable_params: [hotel_id, checkin, checkout]
-    hints:
-      side_effects: true
-      requires_auth: true
 ```
-
-> **Note:** Replace `https://api.example-hotels.com/v1` with your actual Hotels API base URL. Store your API key using the platform's credential store — never commit it to git.
-
-Commit this file:
 
 ```bash
 git add tools/hotels-api.tools.abl
-git commit -m "feat: add hotels API tool definitions"
+git commit -m "feat: add hotels API tool specifications"
 ```
 
-> **How tools are compiled:** When you run `agentcl platform agents save-dsl --file agents/hotel_search.agent.abl`, the CLI reads the `file: "../tools/hotels-api.tools.abl"` directive in the agent, reads the tools file from your local disk, and inlines its content into the DSL before sending it to the platform. The platform receives a single self-contained document — you do not need to upload the tools file separately.
+### Step 5b — Register tools in the Project Tool Library
+
+The HTTP implementation (`endpoint`, `method`, `auth`) must be configured in the **Project Tool Library** via the Studio UI or API. Agent DSL files declare only the tool interface (signature + description).
+
+Open the Studio for your project and create each tool in the Tool Library:
+
+| Tool | Method | Endpoint |
+|---|---|---|
+| `search_hotels` | POST | `/hotels/search` |
+| `get_hotel` | GET | `/hotels/{hotel_id}` |
+| `check_availability` | POST | `/hotels/{hotel_id}/availability` |
+| `book_hotel` | POST | `/hotels/bookings` |
+
+Set the base URL to your Hotels API (`https://api.example-hotels.com/v1`) and configure API key authentication for each tool.
+
+> **Why this separation?** Agent DSL files are version-controlled and portable. Tool implementations contain environment-specific configuration (URLs, auth) that differs between staging and production. Keeping them in the Tool Library lets you point the same agent at different backends per environment without changing the DSL.
 
 ---
 
@@ -271,7 +277,25 @@ PERSONA: |
   Concise, helpful, and proactive in clarifying vague preferences.
 
 TOOLS:
-  file: "../tools/hotels-api.tools.abl" [search_hotels, get_hotel, check_availability]
+  search_hotels(
+    destination: string,
+    checkin: date,
+    checkout: date,
+    guests: number = 1,
+    max_results: number = 10
+  ) -> {hotels: Hotel[], total: number}
+    description: "Search available hotels by destination and dates"
+
+  get_hotel(hotel_id: string) -> {id: string, name: string, description: string, amenities: string[], rating: number, price_per_night: number}
+    description: "Get full details for a specific hotel"
+
+  check_availability(
+    hotel_id: string,
+    checkin: date,
+    checkout: date,
+    room_type: string = "standard"
+  ) -> {available: boolean, price: number, currency: string, rooms_left: number}
+    description: "Check room availability and current pricing for a hotel"
 
 MEMORY:
   session:
@@ -370,7 +394,27 @@ PERSONA: |
   Double-checks all details to prevent errors and builds trust.
 
 TOOLS:
-  file: "../tools/hotels-api.tools.abl" [book_hotel, check_availability]
+  check_availability(
+    hotel_id: string,
+    checkin: date,
+    checkout: date,
+    room_type: string = "standard"
+  ) -> {available: boolean, price: number, currency: string, rooms_left: number}
+    description: "Check room availability and current pricing for a hotel"
+
+  book_hotel(
+    hotel_id: string,
+    checkin: date,
+    checkout: date,
+    room_type: string,
+    guest_name: string,
+    guest_email: string,
+    guests: number
+  ) -> {confirmation_number: string, total_price: number, currency: string, status: string}
+    description: "Create a hotel reservation. Requires explicit user confirmation before calling."
+    confirmation:
+      require: always
+      immutable_params: [hotel_id, checkin, checkout]
 
 MEMORY:
   session:
