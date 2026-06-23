@@ -5,6 +5,7 @@ import { homedir } from 'node:os';
 export interface CliState {
   projectId?: string;
   sessionId?: string;
+  serverUrl?: string;
 }
 
 const LOCAL_STATE_FILE = '.arch/state.json';
@@ -62,4 +63,9 @@ export function resolveProjectId(explicit?: string): string | undefined {
 
 export function resolveSessionId(explicit?: string): string | undefined {
   return explicit ?? readCliState().sessionId;
+}
+
+/** Resolve server URL: explicit flag → AGENTS_URL env var → saved state */
+export function resolveServerUrl(explicit?: string): string | undefined {
+  return explicit ?? process.env.AGENTS_URL ?? readCliState().serverUrl;
 }

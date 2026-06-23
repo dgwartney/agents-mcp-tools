@@ -7,11 +7,12 @@ import {
   type AuthOptions,
 } from '../client/auth-client.js';
 import { readStoredCredentials, hasValidToken } from '../client/credentials.js';
+import { resolveServerUrl } from './state.js';
 import { deriveUrls } from '../utils/url.js';
 import type { DebugContext } from '../tools/index.js';
 
 export function buildCliContext(serverUrl?: string): DebugContext {
-  const effectiveUrl = serverUrl ?? process.env.AGENTS_URL;
+  const effectiveUrl = resolveServerUrl(serverUrl);
   const { wsUrl, httpUrl } = effectiveUrl
     ? deriveUrls(effectiveUrl)
     : { wsUrl: undefined, httpUrl: undefined };

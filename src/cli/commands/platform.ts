@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import type { DebugContext } from '../../tools/index.js';
 import { printResult, exitOnFailure } from '../output.js';
-import { resolveProjectId, resolveSessionId } from '../state.js';
+import { resolveProjectId, resolveSessionId, writeCliState } from '../state.js';
 
 import { connect } from '../../tools/connect.js';
 import { platformProjects } from '../../tools/platform-projects.js';
@@ -56,12 +56,24 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .option('--force', 'Force disconnect and reconnect', false)
     .option('--device-code <code>', 'Device code from prior auth')
     .action((opts) => {
-      run(() => connect({
-        serverUrl: opts.serverUrl,
-        authToken: opts.authToken,
-        force: opts.force,
-        deviceCode: opts.deviceCode,
-      }, ctx));
+      const handler = async (): Promise<string> => {
+        const result = await connect({
+          serverUrl: opts.serverUrl,
+          authToken: opts.authToken,
+          force: opts.force,
+          deviceCode: opts.deviceCode,
+        }, ctx);
+        // On successful connect, persist the server URL so future commands
+        // in this directory don't need AGENTS_URL set in the environment.
+        try {
+          const parsed = JSON.parse(result) as { success?: boolean; serverUrl?: string };
+          if (parsed.success && parsed.serverUrl) {
+            writeCliState({ serverUrl: parsed.serverUrl });
+          }
+        } catch { /* ignore parse errors */ }
+        return result;
+      };
+      run(handler);
     });
 
   // ── projects ─────────────────────────────────────────────────────────────
