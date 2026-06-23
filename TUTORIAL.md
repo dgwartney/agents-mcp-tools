@@ -253,7 +253,7 @@ This agent searches hotels, filters results, and presents options to the user.
 **`agents/hotel_search.agent.abl`**
 
 ```yaml
-AGENT: Hotel_Search
+AGENT: hotel_search
 VERSION: "1.0.0"
 DESCRIPTION: "Searches hotels, compares options, and presents the best matches"
 
@@ -300,7 +300,7 @@ GATHER:
     required: false
 
 HANDOFF:
-  - TO: Hotel_Booking
+  - TO: hotel_booking
     WHEN: user_ready_to_book IS SET AND hotel_id IS SET
     CONTEXT:
       pass: [hotel_id, checkin, checkout, guests]
@@ -336,7 +336,7 @@ This agent collects guest details and completes the reservation.
 **`agents/hotel_booking.agent.abl`**
 
 ```yaml
-AGENT: Hotel_Booking
+AGENT: hotel_booking
 VERSION: "1.0.0"
 DESCRIPTION: "Collects guest information and completes hotel reservations"
 
@@ -376,7 +376,7 @@ GATHER:
     options: [standard, deluxe, suite]
 
 HANDOFF:
-  - TO: Hotel_Search
+  - TO: hotel_search
     WHEN: room_unavailable IS SET
     CONTEXT:
       pass: [destination, checkin, checkout, guests]
@@ -419,14 +419,14 @@ The supervisor routes conversations to the correct specialist and handles top-le
 **`agents/coordinator.supervisor.abl`**
 
 ```yaml
-SUPERVISOR: Hotel_Coordinator
+SUPERVISOR: hotel_coordinator
 VERSION: "1.0.0"
 DESCRIPTION: "Routes hotel queries to the appropriate specialist agent"
 
 GOAL: |
   Detect user intent and route to the right specialist:
-  - Hotel_Search for browsing, comparing, and researching hotels
-  - Hotel_Booking for completing reservations
+  - hotel_search for browsing, comparing, and researching hotels
+  - hotel_booking for completing reservations
 
 PERSONA: |
   Professional travel coordinator. Friendly, efficient, and transparent.
@@ -434,11 +434,11 @@ PERSONA: |
 
 AGENTS:
   - REF: ./hotel_search.agent.abl
-    ALIAS: Hotel_Search
+    ALIAS: hotel_search
     CAPABILITIES: [hotel_search, compare_hotels, check_availability]
 
   - REF: ./hotel_booking.agent.abl
-    ALIAS: Hotel_Booking
+    ALIAS: hotel_booking
     CAPABILITIES: [book_hotel, process_reservation, confirm_booking]
 
 BEHAVIOR:
@@ -450,12 +450,12 @@ ROUTING:
   - NAME: search_route
     PRIORITY: 10
     WHEN: intent.category == "hotel_search" OR intent.category == "browse"
-    THEN: ROUTE_TO Hotel_Search
+    THEN: ROUTE_TO hotel_search
 
   - NAME: booking_route
     PRIORITY: 10
     WHEN: intent.category == "book_hotel" OR intent.category == "reservation"
-    THEN: ROUTE_TO Hotel_Booking
+    THEN: ROUTE_TO hotel_booking
 
   - NAME: default_route
     PRIORITY: 100
@@ -463,20 +463,20 @@ ROUTING:
     THEN:
       INTENT_MATCH:
         - INTENTS: [find_hotel, search, browse, compare, recommend]
-          ACTION: ROUTE_TO Hotel_Search
+          ACTION: ROUTE_TO hotel_search
         - INTENTS: [book, reserve, confirm, pay, checkout]
-          ACTION: ROUTE_TO Hotel_Booking
-        FALLBACK: ROUTE_TO Hotel_Search
+          ACTION: ROUTE_TO hotel_booking
+        FALLBACK: ROUTE_TO hotel_search
 
 HANDOFF:
-  - TO: Hotel_Search
+  - TO: hotel_search
     WHEN: intent.category IN ["hotel_search", "browse", "compare"]
     CONTEXT:
       pass: []
       summary: "User wants to search or browse hotels"
     RETURN: false
 
-  - TO: Hotel_Booking
+  - TO: hotel_booking
     WHEN: intent.category IN ["book_hotel", "reservation"]
     CONTEXT:
       pass: []
@@ -515,14 +515,14 @@ git commit -m "feat: add coordinator supervisor agent"
 
 Save each agent's DSL to the platform. The agent name is inferred from the `AGENT:` / `SUPERVISOR:` declaration — no `--agent-name` flag needed. If an agent record doesn't exist yet the CLI creates it automatically (upsert).
 
-> **Upload order matters:** agents that reference other agents (via `HANDOFF` or `DELEGATE`) must be uploaded after those agents exist. Upload in this order: `Hotel_Booking` → `Hotel_Search` → `Hotel_Coordinator`.
+> **Upload order matters:** agents that reference other agents (via `HANDOFF` or `DELEGATE`) must be uploaded after those agents exist. Upload in this order: `hotel_booking` → `hotel_search` → `hotel_coordinator`.
 
 ```bash
 # 1. Register the hotel booking agent first (no outbound handoffs to unknown agents)
 agentcl platform agents save-dsl \
   --dsl-content "$(cat agents/hotel_booking.agent.abl)"
 
-# 2. Register the hotel search agent (handoff to Hotel_Booking — now exists)
+# 2. Register the hotel search agent (handoff to hotel_booking — now exists)
 agentcl platform agents save-dsl \
   --dsl-content "$(cat agents/hotel_search.agent.abl)"
 
@@ -549,30 +549,42 @@ agentcl platform package-model --path .
 
 Bundle your agents into a versioned release and deploy to the staging environment.
 
+### Confirm your registered agent names
+
+The `--agent-name` flag in all version and deployment commands must match the name the agent is **actually registered under** on the platform. This comes from the `AGENT:` or `SUPERVISOR:` declaration in the ABL file — `save-dsl` uses that declaration as the record name.
+
+Check your registered names before proceeding:
+
+```bash
+agentcl platform agents list
+```
+
+The `name` field in the response is the exact string to use in all subsequent commands. In this tutorial the ABL files declare `hotel_search`, `hotel_booking`, and `hotel_coordinator`, so those are the names used below. Substitute with whatever your `agents list` output shows if different.
+
 ### Create versions for all three agents
 
 Each agent needs its own version snapshot before you can bundle them into a deployment:
 
 ```bash
 agentcl platform versions create \
-  --agent-name Hotel_Search \
+  --agent-name hotel_search \
   --changelog "Initial release: hotel search with REST API tools"
 
 agentcl platform versions create \
-  --agent-name Hotel_Booking \
+  --agent-name hotel_booking \
   --changelog "Initial release: hotel booking with confirmation gate"
 
 agentcl platform versions create \
-  --agent-name Hotel_Coordinator \
+  --agent-name hotel_coordinator \
   --changelog "Initial release: supervisor routing search and booking agents"
 ```
 
 Verify all versions were created:
 
 ```bash
-agentcl platform versions list --agent-name Hotel_Search
-agentcl platform versions list --agent-name Hotel_Booking
-agentcl platform versions list --agent-name Hotel_Coordinator
+agentcl platform versions list --agent-name hotel_search
+agentcl platform versions list --agent-name hotel_booking
+agentcl platform versions list --agent-name hotel_coordinator
 ```
 
 All three should show version `1`. Note the numbers — you will reference them in the deployment manifest.
@@ -583,8 +595,8 @@ All three should show version `1`. Note the numbers — you will reference them 
 agentcl platform deployments create \
   --label "v1.0 — staging" \
   --environment staging \
-  --entry-agent-name Hotel_Coordinator \
-  --agent-version-manifest '{"Hotel_Coordinator": 1, "Hotel_Search": 1, "Hotel_Booking": 1}'
+  --entry-agent-name hotel_coordinator \
+  --agent-version-manifest '{"hotel_coordinator": 1, "hotel_search": 1, "hotel_booking": 1}'
 ```
 
 ---
@@ -609,7 +621,7 @@ git commit -m "feat(search): show top 5 results with comparison table"
 ```bash
 agentcl platform agents save-dsl \
   --dsl-content "$(cat agents/hotel_search.agent.abl)"
-# Agent name (Hotel_Search) is inferred automatically from the AGENT: declaration
+# Agent name (hotel_search) is inferred automatically from the AGENT: declaration
 ```
 
 ### Step 4 — Validate
@@ -622,14 +634,14 @@ agentcl platform validate-package --path .
 
 ```bash
 agentcl platform versions create \
-  --agent-name Hotel_Search \
+  --agent-name hotel_search \
   --changelog "Show top 5 results with side-by-side comparison table"
 ```
 
 Confirm version 2 exists before building the deployment manifest:
 
 ```bash
-agentcl platform versions list --agent-name Hotel_Search
+agentcl platform versions list --agent-name hotel_search
 # Should show version 1 (original) and version 2 (new)
 ```
 
@@ -639,11 +651,11 @@ agentcl platform versions list --agent-name Hotel_Search
 agentcl platform deployments create \
   --label "v1.1 — staging" \
   --environment staging \
-  --entry-agent-name Hotel_Coordinator \
-  --agent-version-manifest '{"Hotel_Coordinator": 1, "Hotel_Search": 2, "Hotel_Booking": 1}'
+  --entry-agent-name hotel_coordinator \
+  --agent-version-manifest '{"hotel_coordinator": 1, "hotel_search": 2, "hotel_booking": 1}'
 ```
 
-Notice that only `Hotel_Search` incremented to version 2 — the coordinator and booking agents stay at version 1. The platform tracks which agent versions are bundled in each deployment.
+Notice that only `hotel_search` incremented to version 2 — the coordinator and booking agents stay at version 1. The platform tracks which agent versions are bundled in each deployment.
 
 ### Step 7 — Promote to production
 
@@ -653,8 +665,8 @@ Once staging is verified:
 agentcl platform deployments create \
   --label "v1.1 — production" \
   --environment production \
-  --entry-agent-name Hotel_Coordinator \
-  --agent-version-manifest '{"Hotel_Coordinator": 1, "Hotel_Search": 2, "Hotel_Booking": 1}'
+  --entry-agent-name hotel_coordinator \
+  --agent-version-manifest '{"hotel_coordinator": 1, "hotel_search": 2, "hotel_booking": 1}'
 ```
 
 ### Rollback if needed
