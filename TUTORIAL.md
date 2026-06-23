@@ -242,7 +242,7 @@ git add tools/hotels-api.tools.abl
 git commit -m "feat: add hotels API tool definitions"
 ```
 
-> **How tools are compiled:** The `.tools.abl` file is not uploaded separately. It is compiled automatically by the platform when you upload each agent's DSL in Part 9 — agents import it via the `file:` directive. You do not need to register it independently.
+> **How tools are compiled:** When you run `agentcl platform agents save-dsl --file agents/hotel_search.agent.abl`, the CLI reads the `file: "../tools/hotels-api.tools.abl"` directive in the agent, reads the tools file from your local disk, and inlines its content into the DSL before sending it to the platform. The platform receives a single self-contained document — you do not need to upload the tools file separately.
 
 ---
 
@@ -558,22 +558,19 @@ git commit -m "feat: add coordinator supervisor agent"
 
 ## Part 9: Register Agents on the Platform
 
-Save each agent's DSL to the platform. The agent name is inferred from the `AGENT:` / `SUPERVISOR:` declaration — no `--agent-name` flag needed. If an agent record doesn't exist yet the CLI creates it automatically (upsert).
+Save each agent's DSL to the platform using `--file`. The CLI reads the `.abl` file, **automatically resolves and inlines any `file:` tool imports** from the `tools/` directory, then sends the fully self-contained DSL to the platform. The agent name is inferred from the `AGENT:` / `SUPERVISOR:` declaration — no `--agent-name` flag needed. If an agent record doesn't exist yet the CLI creates it automatically (upsert).
 
 > **Upload order matters:** agents that reference other agents (via `HANDOFF` or `DELEGATE`) must be uploaded after those agents exist. Upload in this order: `hotel_booking` → `hotel_search` → `hotel_coordinator`.
 
 ```bash
 # 1. Register the hotel booking agent first (no outbound handoffs to unknown agents)
-agentcl platform agents save-dsl \
-  --dsl-content "$(cat agents/hotel_booking.agent.abl)"
+agentcl platform agents save-dsl --file agents/hotel_booking.agent.abl
 
 # 2. Register the hotel search agent (handoff to hotel_booking — now exists)
-agentcl platform agents save-dsl \
-  --dsl-content "$(cat agents/hotel_search.agent.abl)"
+agentcl platform agents save-dsl --file agents/hotel_search.agent.abl
 
 # 3. Register the coordinator supervisor last (references both)
-agentcl platform agents save-dsl \
-  --dsl-content "$(cat agents/coordinator.supervisor.abl)"
+agentcl platform agents save-dsl --file agents/coordinator.supervisor.abl
 ```
 
 Validate the package compiles correctly — all three agents are now registered so cross-agent references resolve:
@@ -664,8 +661,7 @@ git commit -m "feat(search): show top 5 results with comparison table"
 ### Step 3 — Push the update to the platform
 
 ```bash
-agentcl platform agents save-dsl \
-  --dsl-content "$(cat agents/hotel_search.agent.abl)"
+agentcl platform agents save-dsl --file agents/hotel_search.agent.abl
 # Agent name (hotel_search) is inferred automatically from the AGENT: declaration
 ```
 
@@ -822,7 +818,7 @@ hotel-booking-agent/
 | Save default project (existing) | `agentcl context set-project --project-id <id>` |
 | Save workspace manually | `agentcl context set-workspace --tenant-id <id> --workspace-name <name>` |
 | Clear all saved context | `agentcl context clear` |
-| Upload agent DSL | `agentcl platform agents save-dsl --dsl-content "$(cat file.abl)"` (name inferred from `AGENT:` declaration) |
+| Upload agent DSL | `agentcl platform agents save-dsl --file agents/my_agent.agent.abl` (resolves tool imports; name inferred from `AGENT:` declaration) |
 | Validate package | `agentcl platform validate-package --path .` |
 | Create version | `agentcl platform versions create --agent-name <name> --changelog "..."` |
 | List versions | `agentcl platform versions list --agent-name <name>` |

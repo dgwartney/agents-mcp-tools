@@ -1,4 +1,6 @@
 import { Command } from 'commander';
+import { readFileSync, existsSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
 import type { DebugContext } from '../../tools/index.js';
 import { printResult, exitOnFailure } from '../output.js';
 import { resolveProjectId, resolveSessionId, writeCliState } from '../state.js';
@@ -31,6 +33,38 @@ type Ctx = DebugContext;
 function extractDslAgentName(dsl: string): string | undefined {
   const match = dsl.match(/^(?:AGENT|SUPERVISOR):\s*(\S+)/im);
   return match?.[1];
+}
+
+/**
+ * Resolve `file: "path"` imports in a DSL string by inlining the referenced
+ * tools file content. This ensures the platform receives a self-contained DSL
+ * with no unresolvable local filesystem references.
+ *
+ * The path in the `file:` directive is resolved relative to `agentFilePath`.
+ */
+function resolveToolImports(dsl: string, agentFilePath: string): string {
+  const agentDir = dirname(resolve(agentFilePath));
+
+  return dsl.replace(
+    /^(\s*)file:\s*["']([^"']+)["'](\s*\[[^\]]*\])?/gm,
+    (_match, indent, filePath) => {
+      const absPath = resolve(agentDir, filePath);
+      if (!existsSync(absPath)) {
+        console.error(`[agentcl] Warning: tools file not found: ${absPath} — leaving file: reference as-is`);
+        return _match;
+      }
+      const toolsContent = readFileSync(absPath, 'utf-8');
+      // Strip the top-level TOOLS: header line if present; keep all tool definitions
+      const body = toolsContent.replace(/^TOOLS:\s*\n?/m, '');
+      // Indent each line to match the agent's TOOLS: block indentation
+      const indented = body
+        .split('\n')
+        .map((line) => (line.trim() === '' ? '' : `${indent}${line}`))
+        .join('\n')
+        .trimEnd();
+      return indented;
+    },
+  );
 }
 
 function run(handler: () => Promise<string>): void {
@@ -199,10 +233,24 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .description('Save agent DSL — agent name is inferred from the AGENT:/SUPERVISOR: declaration if --agent-name is omitted')
     .option('--project-id <id>', 'Project ID')
     .option('--agent-name <name>', 'Agent name (inferred from DSL if not set)')
-    .option('--dsl-content <content>', 'DSL content')
+    .option('--file <path>', 'Path to .abl file — resolves file: tool imports automatically (recommended)')
+    .option('--dsl-content <content>', 'Raw DSL string (use --file instead to get automatic tool import resolution)')
     .action((opts) => {
       const projectId = resolveProjectId(opts.projectId) ?? '';
-      const dslContent: string = opts.dslContent ?? '';
+
+      // --file reads from disk and resolves file: imports; --dsl-content is raw passthrough
+      let dslContent: string;
+      if (opts.file) {
+        const absPath = resolve(opts.file);
+        if (!existsSync(absPath)) {
+          console.error(`[agentcl] Error: file not found: ${absPath}`);
+          process.exit(1);
+        }
+        const raw = readFileSync(absPath, 'utf-8');
+        dslContent = resolveToolImports(raw, absPath);
+      } else {
+        dslContent = opts.dslContent ?? '';
+      }
 
       // Extract the declared name from the DSL header (AGENT: Name or SUPERVISOR: Name)
       const declaredName = extractDslAgentName(dslContent);
