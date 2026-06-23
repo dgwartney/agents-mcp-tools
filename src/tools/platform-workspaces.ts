@@ -195,8 +195,32 @@ export async function platformWorkspaces(
           return error('Could not decode auth token. It may be malformed.');
         }
 
+        const currentTenantId = (payload.tenantId as string) || null;
+
+        // Fetch tenant list to resolve the workspace name for the current tenantId
+        let workspaceName: string | null = null;
+        try {
+          const tenantsResp = await fetchWithTimeout(
+            `${studioBase}/api/auth/tenants`,
+            { headers },
+            10_000,
+          );
+          if (tenantsResp.ok) {
+            const data = (await tenantsResp.json()) as { tenants: Record<string, unknown>[] };
+            const match = Array.isArray(data.tenants)
+              ? data.tenants.find((t) => t.tenantId === currentTenantId)
+              : null;
+            workspaceName = match
+              ? ((match.name ?? match.tenantName ?? match.orgName) as string | null) ?? null
+              : null;
+          }
+        } catch {
+          // Name lookup is best-effort — don't fail the whole command
+        }
+
         return success({
-          tenantId: payload.tenantId || null,
+          workspaceName,
+          tenantId: currentTenantId,
           role: payload.role || null,
           userId: payload.sub || payload.userId || null,
           email: payload.email || null,
