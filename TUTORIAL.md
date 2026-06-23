@@ -273,6 +273,21 @@ PERSONA: |
 TOOLS:
   file: "../tools/hotels-api.tools.abl" [search_hotels, get_hotel, check_availability]
 
+MEMORY:
+  session:
+    hotel_id:
+      type: string
+      description: "Selected hotel ID, set when user chooses a hotel"
+    user_ready_to_book:
+      type: boolean
+      description: "Set when user confirms they want to proceed with booking"
+    user_wants_different_search:
+      type: boolean
+      description: "Set when user asks to start a new search"
+    user_done_browsing:
+      type: boolean
+      description: "Set when user has finished browsing without booking"
+
 GATHER:
   destination:
     prompt: "Which city or area are you looking for a hotel in?"
@@ -356,6 +371,36 @@ PERSONA: |
 
 TOOLS:
   file: "../tools/hotels-api.tools.abl" [book_hotel, check_availability]
+
+MEMORY:
+  session:
+    hotel_id:
+      type: string
+      description: "Hotel ID passed from hotel_search via handoff"
+    hotel_name:
+      type: string
+      description: "Hotel display name resolved from context or tool"
+    checkin:
+      type: date
+      description: "Check-in date passed from hotel_search via handoff"
+    checkout:
+      type: date
+      description: "Check-out date passed from hotel_search via handoff"
+    guests:
+      type: number
+      description: "Number of guests passed from hotel_search via handoff"
+    room_unavailable:
+      type: boolean
+      description: "Set to true when check_availability returns available=false"
+    confirmation_number:
+      type: string
+      description: "Booking confirmation number returned by book_hotel"
+    total_charged:
+      type: number
+      description: "Total price charged, returned by book_hotel"
+    currency:
+      type: string
+      description: "Currency code returned by book_hotel"
 
 GATHER:
   guest_name:
