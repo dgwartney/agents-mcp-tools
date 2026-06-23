@@ -509,13 +509,15 @@ All commands accept `--global` to write to `~/.config/kore-platform/cli-state.js
 Initialise a new Arch Agent Platform project in the current directory using the hotel booking multi-agent template.
 
 ```bash
-agentcl init             # scaffold files + git init only
+agentcl init             # scaffold hotel booking template + git init
 agentcl init --platform  # also authenticate, create platform project, and import tools
+agentcl init --bare      # directories + Makefile only, no .abl template files
+agentcl init --bare --platform  # bare scaffold + platform project (no tool import)
 ```
 
 **Prompts (default mode):**
 - Project name (default: current directory name)
-- Description (default: "Hotel booking multi-agent application")
+- Description (default: "Hotel booking multi-agent application"; "Arch Agent Platform project" in bare mode)
 
 **Additional prompt with `--platform`:**
 - Platform URL (default: `AGENTS_URL` env var or `https://agents.kore.ai`)
@@ -532,9 +534,11 @@ agentcl init --platform  # also authenticate, create platform project, and impor
 | `README.md` | Generated with project name and next steps |
 | `.gitignore` | Excludes `.arch/`, `node_modules/` |
 
+**With `--bare`**, only infrastructure files are written (`.gitignore`, `Makefile`). The `agents/` and `tools/` directories are created empty. No `.abl` files are written and no tool import is performed — you write your own agents from scratch.
+
 **With `--platform`**, after scaffolding and git init:
 1. Authenticates to the platform (opens browser if needed)
 2. Creates the platform project and saves the ID to `.arch/state.json`
-3. Runs `agentcl platform tools import-abl` to register all 4 HTTP tools in the Tool Library
+3. Runs `agentcl platform tools import-abl` to register the 4 HTTP tools *(skipped in `--bare` mode)*
 
 **Templates are embedded in the binary** — no external template files to manage. All content is included in the compiled JS and installed globally with `npm link`.

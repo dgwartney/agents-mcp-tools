@@ -645,7 +645,7 @@ async function ask(
 
 // ── Main init action ──────────────────────────────────────────────────────────
 
-async function runInit(withPlatform: boolean): Promise<void> {
+async function runInit(withPlatform: boolean, bare: boolean): Promise<void> {
   const cwd = process.cwd();
   const defaultName = basename(cwd)
     .replace(/[_-]+/g, ' ')
@@ -665,10 +665,15 @@ async function runInit(withPlatform: boolean): Promise<void> {
 
   try {
     console.log('\n🚀  Arch Agent Platform — Initialize Project');
-    console.log('    Template: Hotel Booking (supervisor + 2 agents + HTTP tools)\n');
+    if (bare) {
+      console.log('    Mode: bare (directories + Makefile only, no .abl files)\n');
+    } else {
+      console.log('    Template: Hotel Booking (supervisor + 2 agents + HTTP tools)\n');
+    }
 
     projectName = await ask(rl, 'Project name', defaultName);
-    projectDescription = await ask(rl, 'Description', 'Hotel booking multi-agent application');
+    projectDescription = await ask(rl, 'Description',
+      bare ? 'Arch Agent Platform project' : 'Hotel booking multi-agent application');
     if (withPlatform) {
       serverUrl = await ask(rl, 'Platform URL', process.env.AGENTS_URL ?? 'https://agents.kore.ai');
     }
@@ -682,11 +687,21 @@ async function runInit(withPlatform: boolean): Promise<void> {
   mkdirSync('agents', { recursive: true });
   mkdirSync('tools', { recursive: true });
 
-  for (const [filePath, content] of Object.entries(TEMPLATE_FILES)) {
+  // In bare mode skip .abl files — only write infrastructure files (Makefile, .gitignore)
+  const filesToWrite = bare
+    ? Object.entries(TEMPLATE_FILES).filter(([p]) => !p.endsWith('.abl'))
+    : Object.entries(TEMPLATE_FILES);
+
+  for (const [filePath, content] of filesToWrite) {
     const dir = dirname(filePath);
     if (dir !== '.') mkdirSync(dir, { recursive: true });
     writeFileSync(filePath, content, 'utf-8');
     console.log(`  ✓  ${filePath}`);
+  }
+
+  if (bare) {
+    console.log('  ℹ  agents/   (empty — add your .agent.abl and .supervisor.abl files here)');
+    console.log('  ℹ  tools/    (empty — add your .tools.abl files here)');
   }
 
   writeFileSync('README.md', readmeTemplate(projectName, projectDescription), 'utf-8');
@@ -743,25 +758,42 @@ async function runInit(withPlatform: boolean): Promise<void> {
       console.error('  Run `agentcl platform projects create --name "..." --save-context` manually.');
     }
 
-    console.log('\nImporting tools into Tool Library...');
-    try {
-      execSync('agentcl platform tools import-abl --file tools/hotels-api.tools.abl', {
-        stdio: 'pipe',
-      });
-      console.log('  ✓  4 tools registered: search_hotels, get_hotel, check_availability, book_hotel');
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error(`  ✗  Tool import failed: ${msg}`);
-      console.error('  Run `agentcl platform tools import-abl --file tools/hotels-api.tools.abl` manually.');
+    // Only import tools when the hotel booking template was scaffolded
+    if (!bare) {
+      console.log('\nImporting tools into Tool Library...');
+      try {
+        execSync('agentcl platform tools import-abl --file tools/hotels-api.tools.abl', {
+          stdio: 'pipe',
+        });
+        console.log('  ✓  4 tools registered: search_hotels, get_hotel, check_availability, book_hotel');
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`  ✗  Tool import failed: ${msg}`);
+        console.error('  Run `agentcl platform tools import-abl --file tools/hotels-api.tools.abl` manually.');
+      }
     }
   }
 
   // ── Done ─────────────────────────────────────────────────────────────────────
-  const nextSteps = withPlatform
-    ? `  1. Update tools/hotels-api.tools.abl — set base_url to your Hotels API
+  const nextSteps = bare
+    ? withPlatform
+      ? `  1. Add your .agent.abl files to agents/
+  2. Add your .tools.abl files to tools/
+  3. agentcl platform tools import-abl --file tools/<your-api>.tools.abl
+  4. make all
+  5. make deploy-staging`
+      : `  1. Add your .agent.abl files to agents/
+  2. Add your .tools.abl files to tools/
+  3. agentcl platform connect --server-url https://agents.kore.ai
+  4. agentcl platform projects create --name "${projectName}" --save-context
+  5. agentcl platform tools import-abl --file tools/<your-api>.tools.abl
+  6. make all
+  7. make deploy-staging`
+    : withPlatform
+      ? `  1. Update tools/hotels-api.tools.abl — set base_url to your Hotels API
   2. make all           — upload agents to the platform
   3. make deploy-staging`
-    : `  1. agentcl platform connect --server-url https://agents.kore.ai
+      : `  1. agentcl platform connect --server-url https://agents.kore.ai
   2. agentcl platform projects create --name "${projectName}" --save-context
   3. make all
   4. make deploy-staging`;
@@ -787,10 +819,11 @@ ${nextSteps}
 export function registerInitCommand(program: Command): void {
   program
     .command('init')
-    .description('Initialise a new Arch Agent Platform project using the hotel booking template')
+    .description('Initialise a new Arch Agent Platform project')
     .option('--platform', 'Also authenticate, create the platform project, and import tools', false)
+    .option('--bare', 'Scaffold directories and Makefile only — no .abl template files', false)
     .action((opts) => {
-      runInit(opts.platform as boolean).catch((err: unknown) => {
+      runInit(opts.platform as boolean, opts.bare as boolean).catch((err: unknown) => {
         console.error(err instanceof Error ? err.message : String(err));
         process.exit(1);
       });

@@ -35,6 +35,8 @@ mkdir my-hotel-agent && cd my-hotel-agent
 agentcl init --platform
 ```
 
+> **Starting from scratch with your own agents?** Use `agentcl init --bare` instead — it creates the directory structure and Makefile but no `.abl` template files, so you write your own agents from the start.
+
 You will be prompted for three things:
 
 ```

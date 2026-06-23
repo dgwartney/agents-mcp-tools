@@ -54,6 +54,7 @@ _agentcl() {
         context)  _agentcl_context ;;
         init)     _arguments \
                     '--platform[Also authenticate, create platform project, and import tools]' \
+                    '--bare[Scaffold directories and Makefile only — no .abl template files]' \
                     '(-h --help)'{-h,--help}'[display help]' ;;
       esac
       ;;
