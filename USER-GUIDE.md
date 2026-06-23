@@ -2,6 +2,13 @@
 
 The `agentcl` CLI gives you direct shell access to the Arch Agent Platform without requiring an LLM. It follows AWS CLI conventions: `agentcl <group> <command> [flags]`.
 
+**Start a new project instantly:**
+```bash
+mkdir my-project && cd my-project
+agentcl init             # scaffolds hotel booking template + git init
+agentcl init --platform  # also authenticates and creates the platform project
+```
+
 ---
 
 ## Installation
@@ -213,7 +220,26 @@ agentcl platform deployments rollback \
 
 ---
 
-## 6. Validating and Linting Local Packages
+## 6. Registering HTTP Tools in the Tool Library
+
+The platform requires HTTP tool implementations to be in the **Project Tool Library** — separate from the agent DSL. Use `import-abl` to bulk-create or update tools from a `.tools.abl` specification file:
+
+```bash
+# Preview what would be created/updated (no changes made)
+agentcl platform tools import-abl --file tools/hotels-api.tools.abl --dry-run
+
+# Apply — upserts all tools (creates new, updates existing)
+agentcl platform tools import-abl --file tools/hotels-api.tools.abl
+
+# List registered tools
+agentcl platform tools list
+```
+
+The `import-abl` command is idempotent — safe to run repeatedly after editing the `.tools.abl` file.
+
+---
+
+## 7. Validating and Linting Local Packages
 
 ```bash
 # Validate an ABL project folder
@@ -228,7 +254,7 @@ agentcl debug lint-abl --path ./my-agent-project
 
 ---
 
-## 7. Debugging Sessions
+## 8. Debugging Sessions
 
 ```bash
 # List active sessions on the server
@@ -272,7 +298,7 @@ agentcl debug diagnostic-layer
 
 ---
 
-## 8. Evaluations
+## 9. Evaluations
 
 ```bash
 # List personas
@@ -297,7 +323,7 @@ agentcl platform evals runs compare --run-ids run-abc,run-def
 
 ---
 
-## 9. Import / Export Projects
+## 10. Import / Export Projects
 
 ```bash
 # Preview what an export would include
@@ -317,7 +343,7 @@ agentcl platform import-export import \
 
 ---
 
-## 10. Output and Scripting
+## 11. Output and Scripting
 
 All commands output pretty-printed JSON to stdout. Use `jq` to extract fields:
 
@@ -338,8 +364,12 @@ agentcl debug get-errors && echo "No errors" || echo "Errors found"
 
 | Tip | Command |
 |---|---|
+| Start a new project | `agentcl init` (scaffolds hotel booking template + git) |
+| Start new project + platform setup | `agentcl init --platform` |
 | Check all available commands | `agentcl --help` |
 | Check options for a command | `agentcl platform projects --help` |
+| Register tools from a .tools.abl file | `agentcl platform tools import-abl --file tools/my-api.tools.abl` |
+| Preview tool import without changes | `agentcl platform tools import-abl --file tools/my-api.tools.abl --dry-run` |
 | Override server URL for one command | `agentcl --server-url https://agents-staging.kore.ai platform projects list` |
 | Use staging vs production | Run `agentcl platform connect --server-url <url>` once per project directory |
 | See which state file is active | `agentcl context show` |

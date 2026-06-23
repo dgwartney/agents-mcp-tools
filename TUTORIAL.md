@@ -7,7 +7,7 @@ This tutorial walks you through creating a multi-agent hotel booking application
 ```
 hotel-booking-agent/
 ├── agents/
-│   ├── coordinator.supervisor.abl   # Routes to specialist agents
+│   ├── hotel.supervisor.abl   # Routes to specialist agents
 │   ├── hotel_search.agent.abl       # Searches & compares hotels
 │   └── hotel_booking.agent.abl      # Handles reservations
 └── tools/
@@ -61,6 +61,7 @@ Commands:
   platform   Manage Arch platform resources
   debug      Debug agent sessions and traces
   context    Manage saved CLI context (project ID, session ID)
+  init       Initialise a new Arch Agent Platform project (hotel booking template)
 ```
 
 **To update the CLI** after pulling new changes:
@@ -93,6 +94,20 @@ agentcl platform workspaces current
 ```
 
 > **Different environments per project:** For a staging project, run `agentcl platform connect --server-url https://agents-staging.kore.ai` from that project's directory. Each project keeps its own credentials and URL in its `.arch/` folder.
+
+---
+
+## Quick Start Alternative: `agentcl init`
+
+Instead of following Parts 3–8 manually, you can scaffold the entire project structure in one step:
+
+```bash
+mkdir hotel-booking-agent && cd hotel-booking-agent
+agentcl init                    # prompts for name + description, scaffolds all files + git init
+agentcl init --platform         # same, plus authenticate + create platform project + import tools
+```
+
+`agentcl init` creates the same files as Parts 3–8: the three ABL agents, tools specification, generic Makefile, README, and .gitignore. **Continue from Part 9** (Register Agents) after running it.
 
 ---
 
@@ -510,7 +525,7 @@ git commit -m "feat: add hotel booking agent"
 
 The supervisor routes conversations to the correct specialist and handles top-level intent detection.
 
-**`agents/coordinator.supervisor.abl`**
+**`agents/hotel.supervisor.abl`**
 
 ```yaml
 SUPERVISOR: hotel_coordinator
@@ -599,7 +614,7 @@ COMPLETE:
 Commit:
 
 ```bash
-git add agents/coordinator.supervisor.abl
+git add agents/hotel.supervisor.abl
 git commit -m "feat: add coordinator supervisor agent"
 ```
 
@@ -619,7 +634,7 @@ agentcl platform agents save-dsl --file agents/hotel_booking.agent.abl
 agentcl platform agents save-dsl --file agents/hotel_search.agent.abl
 
 # 3. Register the coordinator supervisor last (references both)
-agentcl platform agents save-dsl --file agents/coordinator.supervisor.abl
+agentcl platform agents save-dsl --file agents/hotel.supervisor.abl
 ```
 
 Validate the package compiles correctly — all three agents are now registered so cross-agent references resolve:
@@ -846,7 +861,7 @@ hotel-booking-agent/
 │   ├── credentials.json             # auth token for this project's server
 │   └── state.json                   # serverUrl, tenantId, workspaceName, projectId
 ├── agents/
-│   ├── coordinator.supervisor.abl   # Supervisor — routes to specialists
+│   ├── hotel.supervisor.abl   # Supervisor — routes to specialists
 │   ├── hotel_search.agent.abl       # Search agent with HTTP tools
 │   └── hotel_booking.agent.abl      # Booking agent with confirmation gate
 ├── backup/

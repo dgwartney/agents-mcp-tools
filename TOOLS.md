@@ -95,7 +95,7 @@ Manage deployments.
 ### platform_tools
 Manage tools within a project.
 
-**CLI:** `agentcl platform tools <list|get|create|update|delete|test> [flags]`
+**CLI:** `agentcl platform tools <list|get|create|update|delete|test|import-abl> [flags]`
 
 **Actions & required flags:**
 | Action | Required flags | Optional flags |
@@ -106,6 +106,21 @@ Manage tools within a project.
 | update | `--project-id`, `--tool-id` | `--name`, `--definition` |
 | delete | `--project-id`, `--tool-id` | `--confirm` |
 | test | `--project-id`, `--tool-id` | — |
+| import-abl | `--file` | `--project-id`, `--dry-run` |
+
+**`import-abl` behaviour:**
+- Reads a `.tools.abl` file from disk and creates or updates all HTTP tool definitions in the Project Tool Library
+- **Upsert:** fetches the existing tool list first; updates tools that already exist, creates tools that don't
+- `--dry-run` prints which tools would be created/updated without making any changes
+- `base_url` and `auth` from the tools file header are applied to each tool's endpoint automatically
+
+```bash
+# Preview
+agentcl platform tools import-abl --file tools/hotels-api.tools.abl --dry-run
+
+# Apply (upserts all tools — safe to run repeatedly)
+agentcl platform tools import-abl --file tools/hotels-api.tools.abl
+```
 
 ---
 
@@ -486,3 +501,40 @@ All commands accept `--global` to write to `~/.config/kore-platform/cli-state.js
   "sessionId": "sess-xyz789"
 }
 ```
+
+---
+
+## Project Scaffolding (`agentcl init`)
+
+Initialise a new Arch Agent Platform project in the current directory using the hotel booking multi-agent template.
+
+```bash
+agentcl init             # scaffold files + git init only
+agentcl init --platform  # also authenticate, create platform project, and import tools
+```
+
+**Prompts (default mode):**
+- Project name (default: current directory name)
+- Description (default: "Hotel booking multi-agent application")
+
+**Additional prompt with `--platform`:**
+- Platform URL (default: `AGENTS_URL` env var or `https://agents.kore.ai`)
+
+**Scaffolded files:**
+
+| File | Contents |
+|---|---|
+| `agents/hotel_search.agent.abl` | Hotel search specialist agent |
+| `agents/hotel_booking.agent.abl` | Hotel booking specialist agent |
+| `agents/hotel.supervisor.abl` | Supervisor routing to both agents |
+| `tools/hotels-api.tools.abl` | HTTP tool specifications for the Tool Library |
+| `Makefile` | Generic auto-discovery Makefile (works for any Arch project) |
+| `README.md` | Generated with project name and next steps |
+| `.gitignore` | Excludes `.arch/`, `node_modules/` |
+
+**With `--platform`**, after scaffolding and git init:
+1. Authenticates to the platform (opens browser if needed)
+2. Creates the platform project and saves the ID to `.arch/state.json`
+3. Runs `agentcl platform tools import-abl` to register all 4 HTTP tools in the Tool Library
+
+**Templates are embedded in the binary** — no external template files to manage. All content is included in the compiled JS and installed globally with `npm link`.

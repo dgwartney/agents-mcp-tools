@@ -47,6 +47,21 @@ agentcl platform connect
 agentcl platform projects list
 ```
 
+**Start a new project** using the hotel booking multi-agent template:
+
+```bash
+mkdir my-agent-project && cd my-agent-project
+agentcl init             # scaffold files + git init
+agentcl init --platform  # also authenticate, create platform project, import tools
+```
+
+**Register HTTP tools** from a `.tools.abl` file into the Project Tool Library:
+
+```bash
+agentcl platform tools import-abl --file tools/my-api.tools.abl --dry-run  # preview
+agentcl platform tools import-abl --file tools/my-api.tools.abl             # apply (upsert)
+```
+
 ### Environment URLs
 
 | Environment | URL                              |
@@ -89,7 +104,7 @@ Arch creates and changes platform projects, agents, tools, configuration, versio
 | `platform_agents`        | Manage agents (list, get, save_dsl)                      |
 | `platform_versions`      | Manage agent versions (list, create, get, promote, diff) |
 | `platform_deployments`   | Manage deployments (list, create, get, retire, rollback) |
-| `platform_tools`         | Manage tools (list, get, create, update, delete, test)   |
+| `platform_tools`         | Manage tools (list, get, create, update, delete, test, import-abl) |
 | `platform_import_export` | Import/export projects                                   |
 | `platform_config`        | Manage project and LLM configuration                     |
 | `platform_workspaces`    | List, switch, and inspect active workspaces              |
