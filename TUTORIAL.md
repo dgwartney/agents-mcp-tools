@@ -260,7 +260,11 @@ DESCRIPTION: "Searches hotels, compares options, and presents the best matches"
 GOAL: |
   Help users find the perfect hotel by searching available options,
   filtering by their preferences, and presenting clear comparisons.
-  Always confirm search criteria before running a search.
+  Search hotels using the search_hotels tool, present the top 3-5 results
+  with name, rating, price per night, and key amenities. When the user
+  selects a hotel, fetch full details with get_hotel and check current
+  pricing and availability with check_availability. Always confirm
+  search criteria before searching.
 
 PERSONA: |
   Knowledgeable travel assistant with expertise in hotel recommendations.
@@ -288,7 +292,6 @@ GATHER:
   guests:
     prompt: "How many guests?"
     type: number
-    required: false
     default: 1
 
   preferences:
@@ -296,44 +299,19 @@ GATHER:
     type: string
     required: false
 
-FLOW:
-  - STEP: search
-    REASONING: true
-    DO: |
-      Call search_hotels with the gathered destination, checkin, checkout, and guests.
-      If preferences mention budget constraints, note the max_results to limit to 5.
-    ON_RESULT:
-      set:
-        search_results: result.hotels
-        total_found: result.total
-
-  - STEP: present_options
-    REASONING: true
-    DO: |
-      Present the top 3-5 hotels from search_results in a clear comparison.
-      For each hotel show: name, rating, price per night, key amenities.
-      Ask if the user wants more details on any specific hotel.
-
-  - STEP: get_details
-    REASONING: true
-    WHEN: user_selected_hotel IS SET
-    DO: |
-      Call get_hotel and check_availability for the selected hotel.
-      Present full details including current pricing and rooms remaining.
-
 HANDOFF:
   - TO: Hotel_Booking
-    WHEN: user_ready_to_book == true AND hotel_id IS SET
+    WHEN: user_ready_to_book IS SET AND hotel_id IS SET
     CONTEXT:
-      pass: [hotel_id, checkin, checkout, guests, search_results]
+      pass: [hotel_id, checkin, checkout, guests]
       summary: "User selected {{hotel_id}} and is ready to book for {{checkin}} to {{checkout}}"
     RETURN: false
 
 COMPLETE:
-  - WHEN: user_wants_different_search == true
+  - WHEN: user_wants_different_search IS SET
     RESPOND: "No problem! Let me know your new search criteria."
 
-  - WHEN: user_done_browsing == true
+  - WHEN: user_done_browsing IS SET
     RESPOND: "Happy to help whenever you are ready to book. Just let me know!"
 
 ON_ERROR:
@@ -364,7 +342,13 @@ DESCRIPTION: "Collects guest information and completes hotel reservations"
 
 GOAL: |
   Complete hotel reservations accurately and securely.
-  Always confirm full booking details with the user before charging.
+  First verify availability using check_availability with the hotel_id,
+  checkin, checkout, and room_type passed from the search agent.
+  If the room is unavailable, tell the user and trigger the handoff back.
+  Once availability is confirmed, present the full booking summary
+  (hotel, dates, room type, guests, total price, guest name and email)
+  and ask for explicit confirmation before calling book_hotel.
+  Never proceed to booking without explicit user confirmation.
 
 PERSONA: |
   Efficient and reassuring booking specialist.
@@ -391,42 +375,11 @@ GATHER:
     required: true
     options: [standard, deluxe, suite]
 
-FLOW:
-  - STEP: confirm_availability
-    REASONING: false
-    DO: |
-      Call check_availability with hotel_id, checkin, checkout, and room_type.
-      If available == false, inform user and HANDOFF back to Hotel_Search.
-    ON_RESULT:
-      set:
-        current_price: result.price
-        rooms_remaining: result.rooms_left
-
-  - STEP: confirm_with_user
-    REASONING: true
-    DO: |
-      Present a full booking summary to the user:
-      - Hotel, dates, room type, guests
-      - Total price (current_price x number of nights)
-      - Guest name and email
-      Ask for explicit confirmation before proceeding.
-
-  - STEP: complete_booking
-    REASONING: false
-    WHEN: user_confirmed == true
-    DO: |
-      Call book_hotel with all gathered fields.
-      The tool requires user confirmation (configured in tools file).
-    ON_RESULT:
-      set:
-        confirmation_number: result.confirmation_number
-        total_charged: result.total_price
-
 HANDOFF:
   - TO: Hotel_Search
-    WHEN: room_unavailable == true
+    WHEN: room_unavailable IS SET
     CONTEXT:
-      pass: [destination, checkin, checkout, guests, preferences]
+      pass: [destination, checkin, checkout, guests]
       summary: "Selected room is no longer available. Returning to search."
     RETURN: false
 
@@ -448,7 +401,6 @@ ON_ERROR:
   booking_failed:
     RESPOND: "I wasn't able to complete the booking. Your card has not been charged. Shall I try again?"
     RETRY: 1
-    THEN: ESCALATE
 ```
 
 Commit:
@@ -561,23 +513,25 @@ git commit -m "feat: add coordinator supervisor agent"
 
 ## Part 9: Register Agents on the Platform
 
-Save each agent's DSL to the platform using the `agentcl` CLI. The agent name is inferred automatically from the `AGENT:` or `SUPERVISOR:` declaration at the top of each file — no `--agent-name` flag needed. The tools file is compiled automatically as part of each agent's DSL.
+Save each agent's DSL to the platform. The agent name is inferred from the `AGENT:` / `SUPERVISOR:` declaration — no `--agent-name` flag needed. If an agent record doesn't exist yet the CLI creates it automatically (upsert).
+
+> **Upload order matters:** agents that reference other agents (via `HANDOFF` or `DELEGATE`) must be uploaded after those agents exist. Upload in this order: `Hotel_Booking` → `Hotel_Search` → `Hotel_Coordinator`.
 
 ```bash
-# Register the hotel search agent (name inferred: Hotel_Search)
-agentcl platform agents save-dsl \
-  --dsl-content "$(cat agents/hotel_search.agent.abl)"
-
-# Register the hotel booking agent (name inferred: Hotel_Booking)
+# 1. Register the hotel booking agent first (no outbound handoffs to unknown agents)
 agentcl platform agents save-dsl \
   --dsl-content "$(cat agents/hotel_booking.agent.abl)"
 
-# Register the coordinator supervisor (name inferred: Hotel_Coordinator)
+# 2. Register the hotel search agent (handoff to Hotel_Booking — now exists)
+agentcl platform agents save-dsl \
+  --dsl-content "$(cat agents/hotel_search.agent.abl)"
+
+# 3. Register the coordinator supervisor last (references both)
 agentcl platform agents save-dsl \
   --dsl-content "$(cat agents/coordinator.supervisor.abl)"
 ```
 
-Validate the package compiles correctly:
+Validate the package compiles correctly — all three agents are now registered so cross-agent references resolve:
 
 ```bash
 agentcl platform validate-package --path .
