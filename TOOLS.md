@@ -49,7 +49,12 @@ Manage agents within a project.
 |---|---|---|
 | list | `--project-id` | — |
 | get | `--project-id`, `--agent-name` | — |
-| save-dsl | `--project-id`, `--agent-name`, `--dsl-content` | — |
+| save-dsl | `--project-id`, `--dsl-content` | `--agent-name` (inferred from `AGENT:`/`SUPERVISOR:` declaration if omitted) |
+
+**`save-dsl` behaviour:**
+- Agent name is read from the first `AGENT: Name` or `SUPERVISOR: Name` line in the DSL — `--agent-name` is optional and rarely needed
+- **Upsert:** if the agent record does not exist on the platform, it is created automatically before the DSL is uploaded; no need to create the agent separately first
+- The platform enforces that the DSL declaration matches the record name — if `--agent-name` is passed and differs from the DSL declaration, the DSL declaration is used and a warning is printed
 
 ---
 

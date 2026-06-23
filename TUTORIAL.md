@@ -561,22 +561,19 @@ git commit -m "feat: add coordinator supervisor agent"
 
 ## Part 9: Register Agents on the Platform
 
-Save each agent's DSL to the platform using the `agentcl` CLI. The CLI reads the ABL files and uploads them. The tools file is compiled automatically as part of each agent's DSL.
+Save each agent's DSL to the platform using the `agentcl` CLI. The agent name is inferred automatically from the `AGENT:` or `SUPERVISOR:` declaration at the top of each file — no `--agent-name` flag needed. The tools file is compiled automatically as part of each agent's DSL.
 
 ```bash
-# Register the hotel search agent
+# Register the hotel search agent (name inferred: Hotel_Search)
 agentcl platform agents save-dsl \
-  --agent-name hotel_search \
   --dsl-content "$(cat agents/hotel_search.agent.abl)"
 
-# Register the hotel booking agent
+# Register the hotel booking agent (name inferred: Hotel_Booking)
 agentcl platform agents save-dsl \
-  --agent-name hotel_booking \
   --dsl-content "$(cat agents/hotel_booking.agent.abl)"
 
-# Register the coordinator supervisor
+# Register the coordinator supervisor (name inferred: Hotel_Coordinator)
 agentcl platform agents save-dsl \
-  --agent-name hotel_coordinator \
   --dsl-content "$(cat agents/coordinator.supervisor.abl)"
 ```
 
@@ -604,24 +601,24 @@ Each agent needs its own version snapshot before you can bundle them into a depl
 
 ```bash
 agentcl platform versions create \
-  --agent-name hotel_search \
+  --agent-name Hotel_Search \
   --changelog "Initial release: hotel search with REST API tools"
 
 agentcl platform versions create \
-  --agent-name hotel_booking \
+  --agent-name Hotel_Booking \
   --changelog "Initial release: hotel booking with confirmation gate"
 
 agentcl platform versions create \
-  --agent-name hotel_coordinator \
+  --agent-name Hotel_Coordinator \
   --changelog "Initial release: supervisor routing search and booking agents"
 ```
 
 Verify all versions were created:
 
 ```bash
-agentcl platform versions list --agent-name hotel_search
-agentcl platform versions list --agent-name hotel_booking
-agentcl platform versions list --agent-name hotel_coordinator
+agentcl platform versions list --agent-name Hotel_Search
+agentcl platform versions list --agent-name Hotel_Booking
+agentcl platform versions list --agent-name Hotel_Coordinator
 ```
 
 All three should show version `1`. Note the numbers — you will reference them in the deployment manifest.
@@ -632,8 +629,8 @@ All three should show version `1`. Note the numbers — you will reference them 
 agentcl platform deployments create \
   --label "v1.0 — staging" \
   --environment staging \
-  --entry-agent-name hotel_coordinator \
-  --agent-version-manifest '{"hotel_coordinator": 1, "hotel_search": 1, "hotel_booking": 1}'
+  --entry-agent-name Hotel_Coordinator \
+  --agent-version-manifest '{"Hotel_Coordinator": 1, "Hotel_Search": 1, "Hotel_Booking": 1}'
 ```
 
 ---
@@ -657,8 +654,8 @@ git commit -m "feat(search): show top 5 results with comparison table"
 
 ```bash
 agentcl platform agents save-dsl \
-  --agent-name hotel_search \
   --dsl-content "$(cat agents/hotel_search.agent.abl)"
+# Agent name (Hotel_Search) is inferred automatically from the AGENT: declaration
 ```
 
 ### Step 4 — Validate
@@ -671,14 +668,14 @@ agentcl platform validate-package --path .
 
 ```bash
 agentcl platform versions create \
-  --agent-name hotel_search \
+  --agent-name Hotel_Search \
   --changelog "Show top 5 results with side-by-side comparison table"
 ```
 
 Confirm version 2 exists before building the deployment manifest:
 
 ```bash
-agentcl platform versions list --agent-name hotel_search
+agentcl platform versions list --agent-name Hotel_Search
 # Should show version 1 (original) and version 2 (new)
 ```
 
@@ -688,11 +685,11 @@ agentcl platform versions list --agent-name hotel_search
 agentcl platform deployments create \
   --label "v1.1 — staging" \
   --environment staging \
-  --entry-agent-name hotel_coordinator \
-  --agent-version-manifest '{"hotel_coordinator": 1, "hotel_search": 2, "hotel_booking": 1}'
+  --entry-agent-name Hotel_Coordinator \
+  --agent-version-manifest '{"Hotel_Coordinator": 1, "Hotel_Search": 2, "Hotel_Booking": 1}'
 ```
 
-Notice that only `hotel_search` incremented to version 2 — the coordinator and booking agent stay at version 1. The platform tracks which agent versions are bundled in each deployment.
+Notice that only `Hotel_Search` incremented to version 2 — the coordinator and booking agents stay at version 1. The platform tracks which agent versions are bundled in each deployment.
 
 ### Step 7 — Promote to production
 
@@ -702,8 +699,8 @@ Once staging is verified:
 agentcl platform deployments create \
   --label "v1.1 — production" \
   --environment production \
-  --entry-agent-name hotel_coordinator \
-  --agent-version-manifest '{"hotel_coordinator": 1, "hotel_search": 2, "hotel_booking": 1}'
+  --entry-agent-name Hotel_Coordinator \
+  --agent-version-manifest '{"Hotel_Coordinator": 1, "Hotel_Search": 2, "Hotel_Booking": 1}'
 ```
 
 ### Rollback if needed
@@ -814,7 +811,7 @@ hotel-booking-agent/
 | Save default project (existing) | `agentcl context set-project --project-id <id>` |
 | Save workspace manually | `agentcl context set-workspace --tenant-id <id> --workspace-name <name>` |
 | Clear all saved context | `agentcl context clear` |
-| Upload agent DSL | `agentcl platform agents save-dsl --agent-name <name> --dsl-content "$(cat file.abl)"` |
+| Upload agent DSL | `agentcl platform agents save-dsl --dsl-content "$(cat file.abl)"` (name inferred from `AGENT:` declaration) |
 | Validate package | `agentcl platform validate-package --path .` |
 | Create version | `agentcl platform versions create --agent-name <name> --changelog "..."` |
 | List versions | `agentcl platform versions list --agent-name <name>` |
