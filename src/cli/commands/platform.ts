@@ -95,11 +95,39 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .description('Create a new project')
     .option('--name <name>', 'Project name')
     .option('--description <desc>', 'Project description')
-    .action((opts) => run(() => platformProjects({
-      action: 'create',
-      name: opts.name,
-      description: opts.description,
-    }, ctx)));
+    .option('--save-context', 'Save the new project ID to .arch/state.json as the default project', false)
+    .action((opts) => {
+      const handler = async (): Promise<string> => {
+        const result = await platformProjects({
+          action: 'create',
+          name: opts.name,
+          description: opts.description,
+        }, ctx);
+
+        // Extract project ID from the response
+        try {
+          const parsed = JSON.parse(result) as { success?: boolean; project?: { id?: string } };
+          const projectId = parsed.project?.id;
+          if (parsed.success && projectId) {
+            if (opts.saveContext) {
+              // --save-context flag: save silently
+              writeCliState({ projectId });
+              const enriched = { ...parsed, contextSaved: true, savedProjectId: projectId };
+              return JSON.stringify(enriched, null, 2);
+            } else {
+              // No flag: append a hint showing the command to save it
+              const enriched = {
+                ...parsed,
+                hint: `To set as default project: agentcl context set-project --project-id ${projectId}`,
+              };
+              return JSON.stringify(enriched, null, 2);
+            }
+          }
+        } catch { /* return original result if parsing fails */ }
+        return result;
+      };
+      run(handler);
+    });
 
   projects.command('update')
     .description('Update a project')
