@@ -8,6 +8,7 @@
 import { z } from 'zod';
 import type { DebugContext } from './index.js';
 import { validatePathParam } from '../utils/validate.js';
+import { fetchWithTimeout } from '../utils/fetch.js';
 
 // =============================================================================
 // SCHEMA
@@ -53,22 +54,62 @@ export async function platformAgents(args: PlatformAgentsArgs, ctx: DebugContext
 
       case 'save_dsl': {
         if (!agentName) {
-          return JSON.stringify({
-            success: false,
-            error: 'agentName is required for the save_dsl action.',
-          });
+          return JSON.stringify({ success: false, error: 'agentName is required for the save_dsl action.' });
         }
         if (!dslContent) {
-          return JSON.stringify({
-            success: false,
-            error: 'dslContent is required for the save_dsl action.',
-          });
+          return JSON.stringify({ success: false, error: 'dslContent is required for the save_dsl action.' });
         }
         const safeAgentName = validatePathParam(agentName, 'agentName');
-        const result = await ctx.httpClient.put(
-          `/api/projects/${safeProjectId}/agents/${safeAgentName}/dsl`,
-          { dslContent },
+        const baseUrl = ctx.httpClient.getBaseUrl();
+        const token = ctx.httpClient.getAuthToken();
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const dslPath = `/api/projects/${safeProjectId}/agents/${safeAgentName}/dsl`;
+
+        // Attempt PUT — works if the agent already exists
+        let putResp = await fetchWithTimeout(
+          `${baseUrl}${dslPath}`,
+          { method: 'PUT', headers, body: JSON.stringify({ dslContent }) },
+          15_000,
         );
+
+        // If the agent doesn't exist yet, create it first then retry the PUT
+        if (putResp.status === 404) {
+          const createResp = await fetchWithTimeout(
+            `${baseUrl}/api/projects/${safeProjectId}/agents`,
+            { method: 'POST', headers, body: JSON.stringify({ name: safeAgentName }) },
+            15_000,
+          );
+
+          if (!createResp.ok) {
+            const body = await createResp.text().catch(() => '');
+            return JSON.stringify({
+              success: false,
+              error: `Agent "${safeAgentName}" does not exist and could not be created (${createResp.status} ${createResp.statusText}).`,
+              hint: 'Create the agent in the Studio UI first, then run save-dsl.',
+              serverResponse: body || undefined,
+            });
+          }
+
+          // Retry PUT after creation
+          putResp = await fetchWithTimeout(
+            `${baseUrl}${dslPath}`,
+            { method: 'PUT', headers, body: JSON.stringify({ dslContent }) },
+            15_000,
+          );
+        }
+
+        if (!putResp.ok) {
+          const body = await putResp.text().catch(() => '');
+          return JSON.stringify({
+            success: false,
+            error: `PUT ${dslPath} failed: ${putResp.status} ${putResp.statusText}`,
+            serverResponse: body || undefined,
+          });
+        }
+
+        const result = await putResp.json();
         return JSON.stringify({ success: true, data: result }, null, 2);
       }
 
