@@ -24,6 +24,15 @@ import {
 
 type Ctx = DebugContext;
 
+/**
+ * Extract the agent name from an ABL DSL string.
+ * Matches the first `AGENT: Name` or `SUPERVISOR: Name` declaration.
+ */
+function extractDslAgentName(dsl: string): string | undefined {
+  const match = dsl.match(/^(?:AGENT|SUPERVISOR):\s*(\S+)/im);
+  return match?.[1];
+}
+
 function run(handler: () => Promise<string>): void {
   handler()
     .then((result) => {
@@ -187,18 +196,27 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     });
 
   agents.command('save-dsl')
-    .description('Save agent DSL')
+    .description('Save agent DSL — agent name is inferred from the AGENT:/SUPERVISOR: declaration if --agent-name is omitted')
     .option('--project-id <id>', 'Project ID')
-    .option('--agent-name <name>', 'Agent name')
+    .option('--agent-name <name>', 'Agent name (inferred from DSL if not set)')
     .option('--dsl-content <content>', 'DSL content')
     .action((opts) => {
       const projectId = resolveProjectId(opts.projectId) ?? '';
-      run(() => platformAgents({
-        action: 'save_dsl',
-        projectId,
-        agentName: opts.agentName,
-        dslContent: opts.dslContent,
-      }, ctx));
+      const dslContent: string = opts.dslContent ?? '';
+
+      // Extract the declared name from the DSL header (AGENT: Name or SUPERVISOR: Name)
+      const declaredName = extractDslAgentName(dslContent);
+
+      let agentName: string | undefined = opts.agentName;
+      if (!agentName && declaredName) {
+        agentName = declaredName;
+      } else if (agentName && declaredName && agentName !== declaredName) {
+        // Mismatch: always use the DSL declaration to avoid AGENT_DSL_NAME_MISMATCH 409
+        console.error(`[agentcl] Warning: --agent-name "${agentName}" does not match DSL declaration "${declaredName}". Using "${declaredName}".`);
+        agentName = declaredName;
+      }
+
+      run(() => platformAgents({ action: 'save_dsl', projectId, agentName, dslContent }, ctx));
     });
 
   // ── versions ──────────────────────────────────────────────────────────────
