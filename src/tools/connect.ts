@@ -122,7 +122,7 @@ export async function connect(args: ConnectArgs, ctx: DebugContext): Promise<str
 
   // Authenticate using cascade (device auth now auto-opens browser and polls in one call)
   try {
-    const authResult = await ctx.authenticate({ authToken, deviceCode });
+    const authResult = await ctx.authenticate({ authToken, deviceCode, skipStoredCredentials: force === true });
 
     // Connect to WebSocket
     try {
