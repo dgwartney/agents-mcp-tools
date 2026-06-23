@@ -8,6 +8,7 @@ import { buildCliContext } from '../src/cli/context.js';
 import { registerPlatformCommands } from '../src/cli/commands/platform.js';
 import { registerDebugCommands } from '../src/cli/commands/debug.js';
 import { registerContextCommands } from '../src/cli/commands/context.js';
+import { registerInitCommand } from '../src/cli/commands/init.js';
 
 async function main(): Promise<void> {
   const program = new Command();
@@ -37,6 +38,9 @@ async function main(): Promise<void> {
 
   // context group — manages .arch/state.json, no DebugContext needed
   registerContextCommands(program);
+
+  // init — scaffolds a new project in the current directory
+  registerInitCommand(program);
 
   await program.parseAsync(process.argv);
 }

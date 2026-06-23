@@ -52,6 +52,9 @@ _agentcl() {
         platform) _agentcl_platform ;;
         debug)    _agentcl_debug ;;
         context)  _agentcl_context ;;
+        init)     _arguments \
+                    '--platform[Also authenticate, create platform project, and import tools]' \
+                    '(-h --help)'{-h,--help}'[display help]' ;;
       esac
       ;;
   esac
@@ -62,6 +65,7 @@ _agentcl_cmds() {
     'platform:Manage Arch platform resources'
     'debug:Debug agent sessions and traces'
     'context:Manage saved CLI context (project ID, session ID, workspace)'
+    'init:Initialise a new Arch Agent Platform project (hotel booking template)'
     'help:Display help for a command'
   )
   _describe 'command' cmds
