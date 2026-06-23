@@ -74,7 +74,7 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .description('Get a project by ID')
     .option('--project-id <id>', 'Project ID')
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
+      const projectId = resolveProjectId(opts.projectId) ?? '';
       run(() => platformProjects({ action: 'get', projectId }, ctx));
     });
 
@@ -95,7 +95,7 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .option('--description <desc>', 'New description')
     .option('--entry-agent-name <name>', 'Entry agent name (use "" to clear)')
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
+      const projectId = resolveProjectId(opts.projectId) ?? '';
       run(() => platformProjects({
         action: 'update',
         projectId,
@@ -110,7 +110,7 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .option('--project-id <id>', 'Project ID')
     .option('--confirm', 'Confirm destructive operation', false)
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
+      const projectId = resolveProjectId(opts.projectId) ?? '';
       run(() => platformProjects({ action: 'delete', projectId, confirm: opts.confirm }, ctx));
     });
 
@@ -121,7 +121,7 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .description('List all agents in a project')
     .option('--project-id <id>', 'Project ID')
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
+      const projectId = resolveProjectId(opts.projectId) ?? '';
       run(() => platformAgents({ action: 'list', projectId }, ctx));
     });
 
@@ -130,7 +130,7 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .option('--project-id <id>', 'Project ID')
     .option('--agent-name <name>', 'Agent name')
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
+      const projectId = resolveProjectId(opts.projectId) ?? '';
       run(() => platformAgents({ action: 'get', projectId, agentName: opts.agentName }, ctx));
     });
 
@@ -140,7 +140,7 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .option('--agent-name <name>', 'Agent name')
     .option('--dsl-content <content>', 'DSL content')
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
+      const projectId = resolveProjectId(opts.projectId) ?? '';
       run(() => platformAgents({
         action: 'save_dsl',
         projectId,
@@ -157,7 +157,7 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .option('--project-id <id>', 'Project ID')
     .option('--agent-name <name>', 'Agent name')
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
+      const projectId = resolveProjectId(opts.projectId) ?? '';
       run(() => platformVersions({ action: 'list', projectId, agentName: opts.agentName }, ctx));
     });
 
@@ -167,7 +167,7 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .option('--agent-name <name>', 'Agent name')
     .option('--changelog <text>', 'Changelog')
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
+      const projectId = resolveProjectId(opts.projectId) ?? '';
       run(() => platformVersions({
         action: 'create',
         projectId,
@@ -182,7 +182,7 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .option('--agent-name <name>', 'Agent name')
     .option('--version <n>', 'Version number', parseInt)
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
+      const projectId = resolveProjectId(opts.projectId) ?? '';
       run(() => platformVersions({
         action: 'get',
         projectId,
@@ -198,7 +198,7 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .option('--version <n>', 'Version number', parseInt)
     .option('--status <status>', 'New status')
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
+      const projectId = resolveProjectId(opts.projectId) ?? '';
       run(() => platformVersions({
         action: 'promote',
         projectId,
@@ -215,7 +215,7 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .option('--version <n>', 'Version number', parseInt)
     .option('--other-version <m>', 'Other version number', parseInt)
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
+      const projectId = resolveProjectId(opts.projectId) ?? '';
       run(() => platformVersions({
         action: 'diff',
         projectId,
@@ -232,7 +232,7 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .description('List all deployments')
     .option('--project-id <id>', 'Project ID')
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
+      const projectId = resolveProjectId(opts.projectId) ?? '';
       run(() => platformDeployments({ action: 'list', projectId }, ctx));
     });
 
@@ -244,14 +244,14 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .option('--entry-agent-name <name>', 'Entry agent name')
     .option('--agent-version-manifest <json>', 'Agent version manifest (JSON)')
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
+      const projectId = resolveProjectId(opts.projectId) ?? '';
       run(() => platformDeployments({
         action: 'create',
         projectId,
         label: opts.label,
         environment: opts.environment,
         entryAgentName: opts.entryAgentName,
-        agentVersionManifest: parseJsonOpt(opts.agentVersionManifest),
+        agentVersionManifest: parseJsonOpt(opts.agentVersionManifest) as Record<string, string> | undefined,
       }, ctx));
     });
 
@@ -260,7 +260,7 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .option('--project-id <id>', 'Project ID')
     .option('--deployment-id <id>', 'Deployment ID')
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
+      const projectId = resolveProjectId(opts.projectId) ?? '';
       run(() => platformDeployments({
         action: 'get',
         projectId,
@@ -274,7 +274,7 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .option('--deployment-id <id>', 'Deployment ID')
     .option('--confirm', 'Confirm destructive operation', false)
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
+      const projectId = resolveProjectId(opts.projectId) ?? '';
       run(() => platformDeployments({
         action: 'retire',
         projectId,
@@ -289,7 +289,7 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .option('--deployment-id <id>', 'Deployment ID')
     .option('--confirm', 'Confirm destructive operation', false)
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
+      const projectId = resolveProjectId(opts.projectId) ?? '';
       run(() => platformDeployments({
         action: 'rollback',
         projectId,
@@ -305,7 +305,7 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .description('List all tools')
     .option('--project-id <id>', 'Project ID')
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
+      const projectId = resolveProjectId(opts.projectId) ?? '';
       run(() => platformTools({ action: 'list', projectId }, ctx));
     });
 
@@ -314,7 +314,7 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .option('--project-id <id>', 'Project ID')
     .option('--tool-id <id>', 'Tool ID')
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
+      const projectId = resolveProjectId(opts.projectId) ?? '';
       run(() => platformTools({ action: 'get', projectId, toolId: opts.toolId }, ctx));
     });
 
@@ -325,13 +325,13 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .option('--type <type>', 'Tool type')
     .option('--definition <json>', 'Tool definition (JSON)')
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
+      const projectId = resolveProjectId(opts.projectId) ?? '';
       run(() => platformTools({
         action: 'create',
         projectId,
         name: opts.name,
         type: opts.type,
-        definition: parseJsonOpt(opts.definition),
+        definition: parseJsonOpt(opts.definition) as Record<string, unknown> | undefined,
       }, ctx));
     });
 
@@ -342,13 +342,13 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .option('--name <name>', 'New name')
     .option('--definition <json>', 'New definition (JSON)')
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
+      const projectId = resolveProjectId(opts.projectId) ?? '';
       run(() => platformTools({
         action: 'update',
         projectId,
         toolId: opts.toolId,
         name: opts.name,
-        definition: parseJsonOpt(opts.definition),
+        definition: parseJsonOpt(opts.definition) as Record<string, unknown> | undefined,
       }, ctx));
     });
 
@@ -358,7 +358,7 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .option('--tool-id <id>', 'Tool ID')
     .option('--confirm', 'Confirm destructive operation', false)
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
+      const projectId = resolveProjectId(opts.projectId) ?? '';
       run(() => platformTools({
         action: 'delete',
         projectId,
@@ -372,7 +372,7 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .option('--project-id <id>', 'Project ID')
     .option('--tool-id <id>', 'Tool ID')
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
+      const projectId = resolveProjectId(opts.projectId) ?? '';
       run(() => platformTools({ action: 'test', projectId, toolId: opts.toolId }, ctx));
     });
 
@@ -383,7 +383,7 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .description('Get project settings')
     .option('--project-id <id>', 'Project ID')
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
+      const projectId = resolveProjectId(opts.projectId) ?? '';
       run(() => platformConfig({ action: 'get_settings', projectId }, ctx));
     });
 
@@ -392,11 +392,11 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .option('--project-id <id>', 'Project ID')
     .option('--settings <json>', 'Settings object (JSON)')
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
+      const projectId = resolveProjectId(opts.projectId) ?? '';
       run(() => platformConfig({
         action: 'update_settings',
         projectId,
-        settings: parseJsonOpt(opts.settings),
+        settings: parseJsonOpt(opts.settings) as Record<string, unknown> | undefined,
       }, ctx));
     });
 
@@ -404,7 +404,7 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .description('Get LLM configuration')
     .option('--project-id <id>', 'Project ID')
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
+      const projectId = resolveProjectId(opts.projectId) ?? '';
       run(() => platformConfig({ action: 'get_llm_config', projectId }, ctx));
     });
 
@@ -413,11 +413,11 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .option('--project-id <id>', 'Project ID')
     .option('--settings <json>', 'LLM config object (JSON)')
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
+      const projectId = resolveProjectId(opts.projectId) ?? '';
       run(() => platformConfig({
         action: 'update_llm_config',
         projectId,
-        settings: parseJsonOpt(opts.settings),
+        settings: parseJsonOpt(opts.settings) as Record<string, unknown> | undefined,
       }, ctx));
     });
 
@@ -444,7 +444,7 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .description('Preview project export metadata')
     .option('--project-id <id>', 'Project ID')
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
+      const projectId = resolveProjectId(opts.projectId) ?? '';
       run(() => platformImportExport({ action: 'export_preview', projectId }, ctx));
     });
 
@@ -453,7 +453,7 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .option('--project-id <id>', 'Project ID')
     .option('--path <path>', 'Output path')
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
+      const projectId = resolveProjectId(opts.projectId) ?? '';
       run(() => platformImportExport({ action: 'export', projectId, path: opts.path }, ctx));
     });
 
@@ -462,7 +462,7 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .option('--project-id <id>', 'Project ID')
     .option('--path <path>', 'Input path')
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
+      const projectId = resolveProjectId(opts.projectId) ?? '';
       run(() => platformImportExport({ action: 'import_preview', projectId, path: opts.path }, ctx));
     });
 
@@ -474,14 +474,14 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .option('--preview-digest <digest>', 'Preview digest for acknowledgement')
     .option('--data <json>', 'Import data (JSON)')
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
+      const projectId = resolveProjectId(opts.projectId) ?? '';
       run(() => platformImportExport({
         action: 'import',
         projectId,
         path: opts.path,
         confirm: opts.confirm,
         previewDigest: opts.previewDigest,
-        data: parseJsonOpt(opts.data),
+        data: parseJsonOpt(opts.data) as Record<string, unknown> | undefined,
       }, ctx));
     });
 
@@ -491,7 +491,7 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .option('--path <path>', 'Local folder or .zip path')
     .option('--project-id <id>', 'Project ID')
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
+      const projectId = resolveProjectId(opts.projectId) ?? '';
       run(() => platformValidatePackage({ path: opts.path, projectId }, ctx));
     });
 
@@ -501,8 +501,7 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .option('--path <path>', 'Local folder or .zip path')
     .option('--project-id <id>', 'Project ID')
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
-      run(() => platformPackageModel({ path: opts.path, projectId }, ctx));
+      run(() => platformPackageModel({ path: opts.path }, ctx));
     });
 
   // ── evals ─────────────────────────────────────────────────────────────────
@@ -530,7 +529,7 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
         cmd.option('--confirm', 'Confirm destructive operation', false);
       }
       cmd.action((opts) => {
-        const projectId = resolveProjectId(opts.projectId);
+        const projectId = resolveProjectId(opts.projectId) ?? '';
         const idKey = idFlag ? idFlag.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase()) : undefined;
         const args: Record<string, unknown> = {
           action,
@@ -565,7 +564,7 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
       cmd.option('--body <json>', 'Request body (JSON)');
     }
     cmd.action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
+      const projectId = resolveProjectId(opts.projectId) ?? '';
       const args: Record<string, unknown> = {
         action,
         projectId,

@@ -49,8 +49,7 @@ export function registerDebugCommands(program: Command, ctx: Ctx): void {
     .option('--domain <domain>', 'Filter by domain')
     .option('--project-id <id>', 'Project ID')
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
-      run(() => listAgents({ domain: opts.domain, projectId }, ctx));
+      run(() => listAgents({ domain: opts.domain }, ctx));
     });
 
   // ── load-agent ────────────────────────────────────────────────────────────
@@ -59,7 +58,7 @@ export function registerDebugCommands(program: Command, ctx: Ctx): void {
     .requiredOption('--agent-path <path>', 'Agent path (format: domain/name)')
     .option('--project-id <id>', 'Project ID')
     .action((opts) => {
-      const projectId = resolveProjectId(opts.projectId);
+      const projectId = resolveProjectId(opts.projectId) ?? '';
       run(() => loadAgent({ agentPath: opts.agentPath, projectId }, ctx));
     });
 
@@ -189,13 +188,13 @@ export function registerDebugCommands(program: Command, ctx: Ctx): void {
   sessionCmd.command('subscribe')
     .option('--session-id <id>', 'Session ID')
     .action((opts) => {
-      const sessionId = resolveSessionId(opts.sessionId);
+      const sessionId = resolveSessionId(opts.sessionId) ?? '';
       run(() => session({ action: 'subscribe', sessionId }, ctx));
     });
   sessionCmd.command('unsubscribe')
     .option('--session-id <id>', 'Session ID')
     .action((opts) => {
-      const sessionId = resolveSessionId(opts.sessionId);
+      const sessionId = resolveSessionId(opts.sessionId) ?? '';
       run(() => session({ action: 'unsubscribe', sessionId }, ctx));
     });
 
@@ -306,7 +305,7 @@ export function registerDebugCommands(program: Command, ctx: Ctx): void {
     .option('--filter <regex>', 'Regex filter for log lines')
     .option('--tail <n>', 'Last N lines', parseInt)
     .action((opts) => {
-      run(() => harnessLogs({
+      run(() => (harnessLogs as (a: unknown, c: unknown) => Promise<string>)({
         execution_id: opts.executionId,
         run_sequence: opts.runSequence,
         stage_id: opts.stageId,
