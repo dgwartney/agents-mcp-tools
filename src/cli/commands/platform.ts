@@ -45,34 +45,61 @@ function parseToolsAbl(content: string): ToolAblDef[] {
   const authMatch = content.match(/^\s*auth:\s*(\S+)/m);
   const defaultAuth = authMatch?.[1]?.trim();
 
+  // Skip words that are top-level config keys, not tool names
+  const CONFIG_KEYS = new Set(['base_url', 'auth', 'timeout', 'retry', 'rate_limit', 'TOOLS']);
+
+  // Split into tool blocks by finding lines that start a new tool definition.
+  // A tool starts with an optional-indented word followed by ( on the same or next lines,
+  // and contains "-> " indicating a return type somewhere before the body properties.
+  // Strategy: split on lines matching /^\s*\w+\s*\(/ that are NOT config keys,
+  // then extract properties (endpoint, method, description, auth) from each block.
+
+  const lines = content.split('\n');
   const tools: ToolAblDef[] = [];
 
-  // Match tool definitions: name(params) -> returnType
-  const toolPattern = /^(\s*)(\w+)\([^)]*\)\s*->[^\n]+\n((?:(?!\1\S)[\s\S])*?)(?=\n\s*\w+\(|\n*$)/gm;
-  let match: RegExpExecArray | null;
+  let currentName: string | null = null;
+  let currentBlock: string[] = [];
 
-  while ((match = toolPattern.exec(content)) !== null) {
-    const name = match[2];
-    const body = match[3];
-
-    // Skip if this looks like a top-level property not a tool
-    if (!name || name === 'base_url' || name === 'auth' || name === 'timeout' || name === 'retry') continue;
-
+  const flushBlock = () => {
+    if (!currentName || CONFIG_KEYS.has(currentName)) return;
+    const body = currentBlock.join('\n');
     const descMatch = body.match(/description:\s*["']([^"']+)["']/);
     const endpointMatch = body.match(/endpoint:\s*["']?([^"'\n]+)["']?/);
     const methodMatch = body.match(/method:\s*(\S+)/);
-    const toolAuthMatch = body.match(/^(?!.*auth_config).*auth:\s*(\S+)/m);
+    const toolAuthMatch = body.match(/^(?!.*auth_config)\s+auth:\s*(\S+)/m);
 
     const endpoint = endpointMatch?.[1]?.trim() ?? '';
     const fullEndpoint = endpoint.startsWith('http') ? endpoint : `${baseUrl}${endpoint}`;
     const method = methodMatch?.[1]?.trim().toUpperCase() ?? 'POST';
     const auth = toolAuthMatch?.[1]?.trim() ?? defaultAuth;
-    const description = descMatch?.[1]?.trim() ?? `${name} tool`;
+    const description = descMatch?.[1]?.trim() ?? `${currentName} tool`;
 
-    if (fullEndpoint) {
-      tools.push({ name, description, endpoint: fullEndpoint, method, auth });
+    if (fullEndpoint && fullEndpoint !== baseUrl) {
+      tools.push({ name: currentName, description, endpoint: fullEndpoint, method, auth });
+    }
+  };
+
+  // Detect the start of a tool: a line whose first non-space word is followed by '('
+  // and is not a known config key. Handles both single-line and multi-line params.
+  const toolStartRe = /^(\s*)(\w+)\s*\(/;
+
+  for (const line of lines) {
+    const m = line.match(toolStartRe);
+    if (m && !CONFIG_KEYS.has(m[2]) && line.includes('->')) {
+      // Single-line declaration: name(params) -> returnType
+      flushBlock();
+      currentName = m[2];
+      currentBlock = [line];
+    } else if (m && !CONFIG_KEYS.has(m[2]) && !line.includes(':')) {
+      // Possible start of multi-line param declaration (no colon = not a property)
+      flushBlock();
+      currentName = m[2];
+      currentBlock = [line];
+    } else if (currentName) {
+      currentBlock.push(line);
     }
   }
+  flushBlock();
 
   return tools;
 }
