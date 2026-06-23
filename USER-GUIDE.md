@@ -46,7 +46,7 @@ Then authenticate (opens browser on first run):
 agentcl platform connect
 ```
 
-On first run this opens your browser and waits for you to approve. Credentials are saved to `~/.config/kore-platform/credentials.json` for future sessions — you won't need to log in again until the token expires.
+On first run this opens your browser and waits for you to approve. Credentials are saved to `.arch/credentials.json` (in project directory) for future sessions — you won't need to log in again until the token expires.
 
 To connect to a different server for a single command:
 
@@ -352,4 +352,4 @@ agentcl debug get-errors && echo "No errors" || echo "Errors found"
 |---|---|---|
 | `.arch/state.json` | Project-local (gitignored) | `agentcl context set-project` |
 | `~/.config/kore-platform/cli-state.json` | Global user | `agentcl context set-project --global` |
-| `~/.config/kore-platform/credentials.json` | Auth credentials | `agentcl platform connect` |
+| `.arch/credentials.json` (in project directory) | Auth credentials | `agentcl platform connect` |

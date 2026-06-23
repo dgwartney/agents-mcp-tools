@@ -153,7 +153,7 @@ Arch explains documentation, diagnostics, and system health signals.
 Authentication is automatic when you call `platform_connect`:
 
 1. **Explicit token** — pass `authToken` parameter
-2. **Stored credentials** — reads `~/.config/kore-platform/credentials.json`
+2. **Stored credentials** — reads `.arch/credentials.json` (in project directory)
 3. **Device auth** — opens the browser and polls until approval completes in the same `platform_connect` call
 
 ## License

@@ -433,7 +433,7 @@ Alias for `debug_why_transcript_failed`. Accepts identical parameters.
 The `agentcl` CLI uses the same three-stage auth cascade as the MCP server:
 
 1. **Explicit token** — pass `--auth-token <jwt>` to `agentcl platform connect`
-2. **Stored credentials** — reads from `~/.config/kore-platform/credentials.json`
+2. **Stored credentials** — reads from `.arch/credentials.json` (in project directory)
 3. **Device authorization** — opens browser automatically, polls until approved
 
-Credentials are saved to `~/.config/kore-platform/credentials.json` after successful device auth.
+Credentials are saved to `.arch/credentials.json` (in project directory) after successful device auth.

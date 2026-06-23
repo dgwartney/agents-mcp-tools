@@ -83,7 +83,7 @@ export AGENTS_URL=https://agents.kore.ai
 agentcl platform connect
 ```
 
-On the first run, your browser opens automatically. Log in and approve the device request. Your credentials are saved to `~/.config/kore-platform/credentials.json` — future commands authenticate silently.
+On the first run, your browser opens automatically. Log in and approve the device request. Your credentials are saved to `.arch/credentials.json` (in project directory) — future commands authenticate silently.
 
 Verify authentication worked:
 

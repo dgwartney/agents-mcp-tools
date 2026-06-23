@@ -3,7 +3,7 @@
  *
  * Implements the authentication cascade for Arch MCP tools:
  *   1. Explicit token (if provided)
- *   2. Stored credentials (~/.config/kore-platform/credentials)
+ *   2. Stored credentials (.arch/credentials.json in project directory, or global fallback)
  *   3. Device authorization flow (RFC 8628)
  *      - Auto-launches browser
  *      - Polls in a single call (no two-phase handshake)
@@ -290,7 +290,7 @@ async function deviceAuthFlow(
 }
 
 /**
- * Persist auth token to ~/.config/kore-platform/credentials.json.
+ * Persist auth token to .arch/credentials.json in the current project directory.
  * Best-effort — failures are logged but do not break the auth flow.
  */
 async function persistTokenIfPossible(result: AuthResult, _baseUrl: string): Promise<void> {
@@ -312,7 +312,7 @@ async function persistTokenIfPossible(result: AuthResult, _baseUrl: string): Pro
       email: payload.email,
     });
     console.error(
-      `${ARCH_MCP_LOG_PREFIX} Credentials saved to ~/.config/kore-platform/credentials.json`,
+      `${ARCH_MCP_LOG_PREFIX} Credentials saved to .arch/credentials.json`,
     );
   } catch (err) {
     console.error(

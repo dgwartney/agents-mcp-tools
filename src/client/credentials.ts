@@ -1,8 +1,15 @@
 /**
- * Credentials Reader
+ * Credentials Reader/Writer
  *
- * Reads stored credentials from ~/.kore-platform/credentials (Conf-format).
- * Compatible with the kore-platform-cli credential storage.
+ * Credentials are stored project-locally in .arch/credentials.json so each
+ * project directory can authenticate to a different platform URL (prod, staging, dev).
+ *
+ * Resolution order (read):
+ *   1. Walk up from CWD looking for .arch/credentials.json
+ *   2. Fall back to ~/.config/kore-platform/credentials.json (global, backward compat)
+ *
+ * Write target: .arch/credentials.json in the current working directory.
+ * The .arch/ directory is gitignored by convention.
  */
 
 import * as fs from 'node:fs';
@@ -17,13 +24,32 @@ export interface StoredCredentials {
   email?: string;
 }
 
-/**
- * Get the credentials file path.
- * Conf uses: ~/.config/kore-platform/credentials.json (Linux/Mac)
- */
-function getCredentialsPath(): string {
-  const configDir = process.env['XDG_CONFIG_HOME'] || path.join(os.homedir(), '.config');
+const LOCAL_CREDS_FILE = path.join('.arch', 'credentials.json');
+
+/** Global fallback path: ~/.config/kore-platform/credentials.json */
+function globalCredentialsPath(): string {
+  const configDir = process.env['XDG_CONFIG_HOME'] ?? path.join(os.homedir(), '.config');
   return path.join(configDir, 'kore-platform', 'credentials.json');
+}
+
+/**
+ * Walk up from CWD looking for an existing .arch/credentials.json.
+ * Returns the path if found, null otherwise.
+ */
+function findLocalCredentialsPath(): string | null {
+  let dir = process.cwd();
+  while (true) {
+    const candidate = path.join(dir, LOCAL_CREDS_FILE);
+    if (fs.existsSync(candidate)) return candidate;
+    const parent = path.dirname(dir);
+    if (parent === dir) return null;
+    dir = parent;
+  }
+}
+
+/** Path to write new credentials — always .arch/credentials.json in CWD. */
+function localCredentialsWritePath(): string {
+  return path.join(process.cwd(), LOCAL_CREDS_FILE);
 }
 
 /**
@@ -56,28 +82,20 @@ function decryptConf(encryptedData: string, encryptionKey: string): string {
 }
 
 /**
- * Read stored credentials from the kore-platform credentials file.
- * Returns null if no credentials found, expired, or unreadable.
+ * Parse a credentials file at the given path.
+ * Returns null if the file is missing, unreadable, or malformed.
  */
-export function readStoredCredentials(): StoredCredentials | null {
-  const credPath = getCredentialsPath();
-
+function parseCredentialsFile(credPath: string): StoredCredentials | null {
   try {
-    if (!fs.existsSync(credPath)) {
-      return null;
-    }
-
+    if (!fs.existsSync(credPath)) return null;
     const raw = fs.readFileSync(credPath, 'utf-8').trim();
     if (!raw) return null;
 
     let data: Record<string, unknown>;
     try {
-      // Try decrypting with the known encryption key
-      // TODO: Replace with OS keychain (keytar) — hardcoded key provides encoding, not confidentiality
       const decrypted = decryptConf(raw, 'kore-platform-cli-v1');
       data = JSON.parse(decrypted);
     } catch {
-      // If decryption fails, try reading as plain JSON
       try {
         data = JSON.parse(raw);
       } catch {
@@ -87,10 +105,7 @@ export function readStoredCredentials(): StoredCredentials | null {
 
     const token = data['token'] as string | undefined;
     const expiresAt = data['expiresAt'] as string | undefined;
-
-    if (!token || !expiresAt) {
-      return null;
-    }
+    if (!token || !expiresAt) return null;
 
     return {
       token,
@@ -104,17 +119,25 @@ export function readStoredCredentials(): StoredCredentials | null {
 }
 
 /**
- * Write credentials to ~/.config/kore-platform/credentials.json.
- * Creates the directory if it doesn't exist.
+ * Read stored credentials.
+ * Checks .arch/credentials.json in the project tree first, then the global fallback.
+ */
+export function readStoredCredentials(): StoredCredentials | null {
+  const localPath = findLocalCredentialsPath();
+  if (localPath) {
+    const creds = parseCredentialsFile(localPath);
+    if (creds) return creds;
+  }
+  return parseCredentialsFile(globalCredentialsPath());
+}
+
+/**
+ * Write credentials to .arch/credentials.json in the current working directory.
+ * Creates .arch/ if it doesn't exist. File is written with 0600 permissions.
  */
 export function writeStoredCredentials(creds: StoredCredentials): void {
-  const credPath = getCredentialsPath();
-  const dir = path.dirname(credPath);
-
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-
+  const credPath = localCredentialsWritePath();
+  fs.mkdirSync(path.dirname(credPath), { recursive: true });
   fs.writeFileSync(credPath, JSON.stringify(creds, null, 2), { mode: 0o600 });
 }
 
