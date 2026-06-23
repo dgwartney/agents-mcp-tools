@@ -253,40 +253,13 @@ PERSONA: |
   Routes quickly without making the user repeat themselves.
 
 AGENTS:
-  - REF: ./hotel_search.agent.abl
-    ALIAS: hotel_search
-    CAPABILITIES: [hotel_search, compare_hotels, check_availability]
-
-  - REF: ./hotel_booking.agent.abl
-    ALIAS: hotel_booking
-    CAPABILITIES: [book_hotel, process_reservation, confirm_booking]
+  hotel_search: "./hotel_search.agent.abl" [hotel_search, compare_hotels, check_availability]
+  hotel_booking: "./hotel_booking.agent.abl" [book_hotel, process_reservation, confirm_booking]
 
 BEHAVIOR:
   canRespondDirectly: true
   allowedDirectActions: [greet, clarify_intent, answer_faq]
   forbiddenActions: [search_hotels, book_hotel]
-
-ROUTING:
-  - NAME: search_route
-    PRIORITY: 10
-    WHEN: intent.category == "hotel_search" OR intent.category == "browse"
-    THEN: ROUTE_TO hotel_search
-
-  - NAME: booking_route
-    PRIORITY: 10
-    WHEN: intent.category == "book_hotel" OR intent.category == "reservation"
-    THEN: ROUTE_TO hotel_booking
-
-  - NAME: default_route
-    PRIORITY: 100
-    WHEN: true
-    THEN:
-      INTENT_MATCH:
-        - INTENTS: [find_hotel, search, browse, compare, recommend]
-          ACTION: ROUTE_TO hotel_search
-        - INTENTS: [book, reserve, confirm, pay, checkout]
-          ACTION: ROUTE_TO hotel_booking
-        FALLBACK: ROUTE_TO hotel_search
 
 HANDOFF:
   - TO: hotel_search
