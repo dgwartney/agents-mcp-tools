@@ -726,10 +726,22 @@ async function runInit(withPlatform: boolean, bare: boolean): Promise<void> {
   // ── Platform setup (opt-in via --platform) ────────────────────────────────────
   if (withPlatform) {
     console.log('\nConnecting to platform...');
+    // Build context from the server URL provided at the prompt — this ensures the
+    // project is created in the same workspace the user is already authenticated to.
     const ctx = buildCliContext(serverUrl);
+    let authTenantId: string | undefined;
     try {
       const authResult = await ctx.authenticate();
       console.log(`  ✓  Authenticated (${authResult.method})`);
+      // Extract tenantId from the JWT so we can show which workspace the project goes into
+      const token = ctx.httpClient.getAuthToken();
+      if (token) {
+        try {
+          const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString()) as Record<string, unknown>;
+          authTenantId = payload.tenantId as string | undefined;
+          if (authTenantId) console.log(`  ℹ  Workspace: ${authTenantId}`);
+        } catch { /* ignore */ }
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`  ✗  Authentication failed: ${msg}`);
