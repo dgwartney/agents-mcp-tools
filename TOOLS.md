@@ -33,7 +33,7 @@ Manage projects on the platform.
 |---|---|---|
 | list | — | — |
 | get | `--project-id` | — |
-| create | `--name` | `--description` |
+| create | `--name` | `--description`, `--save-context` (saves project ID to `.arch/state.json`) |
 | update | `--project-id` | `--name`, `--description`, `--entry-agent-name` |
 | delete | `--project-id` | `--confirm` (destructive, must be `true`) |
 
@@ -128,6 +128,11 @@ Manage workspaces (tenants).
 | list | — | — |
 | current | — | — |
 | switch | `--tenant-id` | — |
+
+**Side effects on context:**
+- `current` — resolves and saves `tenantId` + `workspaceName` to `.arch/state.json`
+- `switch` — saves the new workspace `tenantId` + `workspaceName` to `.arch/state.json`
+- `current` response includes `workspaceName` (looked up from tenant list, not in JWT)
 
 ---
 
@@ -437,3 +442,40 @@ The `agentcl` CLI uses the same three-stage auth cascade as the MCP server:
 3. **Device authorization** — opens browser automatically, polls until approved
 
 Credentials are saved to `.arch/credentials.json` (in project directory) after successful device auth.
+
+---
+
+## Context Commands (`agentcl context`)
+
+Manage the local `.arch/state.json` that stores per-project defaults.
+
+| Command | Description |
+|---|---|
+| `agentcl context show` | Display active state file path and all saved values |
+| `agentcl context set-project --project-id <id>` | Save default project ID |
+| `agentcl context set-session --session-id <id>` | Save default session ID |
+| `agentcl context set-workspace --tenant-id <id> [--workspace-name <name>]` | Save default workspace |
+| `agentcl context clear` | Clear all saved context (project, session, workspace) |
+
+All commands accept `--global` to write to `~/.config/kore-platform/cli-state.json` instead of the local `.arch/state.json`.
+
+**What is saved automatically (no manual command needed):**
+
+| Trigger | Saves |
+|---|---|
+| `agentcl platform connect` | `serverUrl`, `tenantId` (from JWT) |
+| `agentcl platform workspaces current` | `tenantId`, `workspaceName` |
+| `agentcl platform workspaces switch` | `tenantId`, `workspaceName` |
+| `agentcl platform projects create --save-context` | `projectId` |
+
+**State file contents** (`.arch/state.json`):
+
+```json
+{
+  "serverUrl": "https://agents.kore.ai",
+  "tenantId": "019e6686-...",
+  "workspaceName": "my-workspace",
+  "projectId": "proj-abc123",
+  "sessionId": "sess-xyz789"
+}
+```

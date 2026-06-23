@@ -43,7 +43,7 @@ agentcl platform connect --server-url https://agents.kore.ai
 Your browser opens automatically on the first run. After approving, two files are written to `.arch/` in the current directory (gitignored):
 
 - `.arch/credentials.json` — your auth token
-- `.arch/state.json` — the server URL and any saved project/session IDs
+- `.arch/state.json` — the server URL and the workspace (tenant) the token is scoped to
 
 All subsequent commands work with no flags or environment variables.
 
@@ -66,27 +66,31 @@ agentcl platform connect --force
 
 ## 2. Set Your Working Context
 
-Most commands need a `--project-id`. Set it once per project directory so you don't have to repeat it:
+After connecting, run `agentcl context show` to see everything that's been saved:
 
 ```bash
-# Navigate to your project directory
-cd my-agent-project
-
-# Save default project ID (writes to .arch/state.json)
-agentcl context set-project --project-id proj-abc123
-
-# Verify
 agentcl context show
 ```
 
-Output:
 ```json
 {
   "path": "/path/to/my-agent-project/.arch/state.json",
   "state": {
-    "projectId": "proj-abc123"
+    "serverUrl": "https://agents.kore.ai",
+    "tenantId": "019e6686-...",
+    "workspaceName": "my-workspace"
   }
 }
+```
+
+`tenantId` and `workspaceName` are saved automatically on `platform connect` (decoded from the JWT). To also save a default project ID — so commands don't need `--project-id` — either use the flag at creation time or set it manually:
+
+```bash
+# Save when creating a project
+agentcl platform projects create --name "My Agent" --save-context
+
+# Or set manually after the fact
+agentcl context set-project --project-id proj-abc123
 ```
 
 Now every command in this directory resolves `--project-id` automatically:
@@ -97,12 +101,6 @@ agentcl platform versions list --agent-name booking-agent
 agentcl debug traces
 ```
 
-To set a **global** default (used when no project-local state exists):
-
-```bash
-agentcl context set-project --project-id proj-abc123 --global
-```
-
 To save the active debug session:
 
 ```bash
@@ -111,7 +109,21 @@ agentcl debug get-current-state       # uses saved session ID
 agentcl debug get-errors              # same
 ```
 
-To clear saved context:
+To manually set the workspace (e.g. after switching):
+
+```bash
+agentcl platform workspaces switch --tenant-id tenant-xyz
+# workspace is saved automatically, or set manually:
+agentcl context set-workspace --tenant-id tenant-xyz --workspace-name "My Workspace"
+```
+
+To set a **global** default (used when no project-local state exists):
+
+```bash
+agentcl context set-project --project-id proj-abc123 --global
+```
+
+To clear all saved context:
 
 ```bash
 agentcl context clear
@@ -351,9 +363,21 @@ agentcl debug get-errors && echo "No errors" || echo "Errors found"
 
 | Location | Contents | Created by |
 |---|---|---|
-| `.arch/state.json` | `serverUrl`, `projectId`, `sessionId` | `agentcl platform connect`, `agentcl context set-project` |
+| `.arch/state.json` | `serverUrl`, `tenantId`, `workspaceName`, `projectId`, `sessionId` | `agentcl platform connect`, workspace/project commands |
 | `.arch/credentials.json` | Auth token, expiry, email | `agentcl platform connect` |
 | `~/.config/kore-platform/cli-state.json` | Global `projectId`/`sessionId` fallback | `agentcl context set-project --global` |
 | `~/.config/kore-platform/credentials.json` | Global credential fallback | Legacy / prior versions |
 
-Both `.arch/` files are gitignored. Each project directory has its own set, enabling different server URLs and credentials per project.
+Both `.arch/` files are gitignored. Each project directory has its own set, enabling different server URLs, workspaces, and credentials per project.
+
+**What saves what automatically:**
+
+| Command | Saves to state |
+|---|---|
+| `agentcl platform connect` | `serverUrl`, `tenantId` (from JWT) |
+| `agentcl platform workspaces current` | `tenantId`, `workspaceName` |
+| `agentcl platform workspaces switch` | `tenantId`, `workspaceName` |
+| `agentcl platform projects create --save-context` | `projectId` |
+| `agentcl context set-project` | `projectId` |
+| `agentcl context set-session` | `sessionId` |
+| `agentcl context set-workspace` | `tenantId`, `workspaceName` |

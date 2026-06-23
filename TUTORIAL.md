@@ -84,7 +84,7 @@ agentcl platform connect --server-url https://agents.kore.ai
 On the first run, your browser opens automatically. Log in and approve the device request. Two files are written to `.arch/` in your project directory:
 
 - `.arch/credentials.json` — your auth token (never committed — `.arch/` is gitignored)
-- `.arch/state.json` — the server URL, so future commands know where to connect
+- `.arch/state.json` — the server URL and your workspace (tenant), decoded from the JWT automatically
 
 All subsequent commands in this directory work with no flags and no environment variables:
 
@@ -131,25 +131,33 @@ gh repo create hotel-booking-agent --public --source=. --remote=origin --push
 
 ## Part 4: Create the Platform Project
 
-Create a project on the Arch platform and save the project ID to your local context:
+Create a project and save the project ID to context in one step using `--save-context`:
 
 ```bash
 agentcl platform projects create \
   --name "Hotel Booking Agent" \
-  --description "Multi-agent hotel search and booking system"
+  --description "Multi-agent hotel search and booking system" \
+  --save-context
 ```
 
-The output shows the new project ID. Save it to your local context so you don't have to pass it to every command:
+`--save-context` writes the new project ID to `.arch/state.json` automatically. Without the flag the output includes a hint with the command to save it manually.
 
-```bash
-# Replace proj-abc123 with your actual project ID from the output above
-agentcl context set-project --project-id proj-abc123
-```
-
-Verify:
+Verify the full context — you should see server URL, workspace, and project ID:
 
 ```bash
 agentcl context show
+```
+
+```json
+{
+  "path": "/path/to/hotel-booking-agent/.arch/state.json",
+  "state": {
+    "serverUrl": "https://agents.kore.ai",
+    "tenantId": "019e6686-...",
+    "workspaceName": "my-workspace",
+    "projectId": "proj-abc123"
+  }
+}
 ```
 
 ---
@@ -783,7 +791,7 @@ hotel-booking-agent/
 ├── .gitignore
 ├── .arch/                           # gitignored — local CLI state, not committed
 │   ├── credentials.json             # auth token for this project's server
-│   └── state.json                   # saved server URL and project ID
+│   └── state.json                   # serverUrl, tenantId, workspaceName, projectId
 ├── agents/
 │   ├── coordinator.supervisor.abl   # Supervisor — routes to specialists
 │   ├── hotel_search.agent.abl       # Search agent with HTTP tools
@@ -800,8 +808,12 @@ hotel-booking-agent/
 
 | Task | Command |
 |---|---|
-| Authenticate | `agentcl platform connect` |
-| Save default project | `agentcl context set-project --project-id <id>` |
+| Authenticate + save workspace | `agentcl platform connect --server-url <url>` |
+| Show full context | `agentcl context show` |
+| Save default project (at creation) | `agentcl platform projects create --name <name> --save-context` |
+| Save default project (existing) | `agentcl context set-project --project-id <id>` |
+| Save workspace manually | `agentcl context set-workspace --tenant-id <id> --workspace-name <name>` |
+| Clear all saved context | `agentcl context clear` |
 | Upload agent DSL | `agentcl platform agents save-dsl --agent-name <name> --dsl-content "$(cat file.abl)"` |
 | Validate package | `agentcl platform validate-package --path .` |
 | Create version | `agentcl platform versions create --agent-name <name> --changelog "..."` |
