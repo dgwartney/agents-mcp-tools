@@ -26,7 +26,6 @@ Three agents work together:
 - Node.js 18+ and npm
 - Git and a GitHub account
 - An Arch Agent Platform account at [agents.kore.ai](https://agents.kore.ai)
-- `AGENTS_URL` set in your shell (e.g. `export AGENTS_URL=https://agents.kore.ai`)
 
 ---
 
@@ -76,20 +75,24 @@ npm run build   # npm link only needs to run once
 
 ## Part 2: Authenticate
 
-Connect to the Arch platform and authenticate:
+Connect to the Arch platform and authenticate. Pass the server URL once with `--server-url` — it is saved to `.arch/state.json` so you never need to pass it again:
 
 ```bash
-export AGENTS_URL=https://agents.kore.ai
-agentcl platform connect
+agentcl platform connect --server-url https://agents.kore.ai
 ```
 
-On the first run, your browser opens automatically. Log in and approve the device request. Your credentials are saved to `.arch/credentials.json` (in project directory) — future commands authenticate silently.
+On the first run, your browser opens automatically. Log in and approve the device request. Two files are written to `.arch/` in your project directory:
 
-Verify authentication worked:
+- `.arch/credentials.json` — your auth token (never committed — `.arch/` is gitignored)
+- `.arch/state.json` — the server URL, so future commands know where to connect
+
+All subsequent commands in this directory work with no flags and no environment variables:
 
 ```bash
 agentcl platform workspaces current
 ```
+
+> **Different environments per project:** For a staging project, run `agentcl platform connect --server-url https://agents-staging.kore.ai` from that project's directory. Each project keeps its own credentials and URL in its `.arch/` folder.
 
 ---
 
@@ -778,6 +781,9 @@ After following this tutorial, your repository looks like this:
 ```
 hotel-booking-agent/
 ├── .gitignore
+├── .arch/                           # gitignored — local CLI state, not committed
+│   ├── credentials.json             # auth token for this project's server
+│   └── state.json                   # saved server URL and project ID
 ├── agents/
 │   ├── coordinator.supervisor.abl   # Supervisor — routes to specialists
 │   ├── hotel_search.agent.abl       # Search agent with HTTP tools

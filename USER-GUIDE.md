@@ -34,32 +34,33 @@ npm run build   # npm link only needs to run once
 
 ## 1. Connect and Authenticate
 
-Set your server URL once via environment variable:
+Pass the server URL once with `--server-url` — it is saved to `.arch/state.json` so every subsequent command in this directory knows where to connect:
 
 ```bash
-export AGENTS_URL=https://agents.kore.ai
+agentcl platform connect --server-url https://agents.kore.ai
 ```
 
-Then authenticate (opens browser on first run):
+Your browser opens automatically on the first run. After approving, two files are written to `.arch/` in the current directory (gitignored):
+
+- `.arch/credentials.json` — your auth token
+- `.arch/state.json` — the server URL and any saved project/session IDs
+
+All subsequent commands work with no flags or environment variables.
+
+To connect to a staging environment from a different project directory:
 
 ```bash
-agentcl platform connect
-```
-
-On first run this opens your browser and waits for you to approve. Credentials are saved to `.arch/credentials.json` (in project directory) for future sessions — you won't need to log in again until the token expires.
-
-To connect to a different server for a single command:
-
-```bash
+cd ~/projects/my-staging-project
 agentcl platform connect --server-url https://agents-staging.kore.ai
-agentcl --server-url https://agents-staging.kore.ai platform projects list
 ```
 
-To force re-authentication:
+To force fresh browser authentication (clears stored credentials):
 
 ```bash
 agentcl platform connect --force
 ```
+
+> **`AGENTS_URL` environment variable** is still supported as an alternative to `--server-url` and takes precedence over the saved state. Useful in CI pipelines: `AGENTS_URL=https://agents.kore.ai agentcl platform projects list`.
 
 ---
 
@@ -330,7 +331,7 @@ agentcl debug get-errors && echo "No errors" || echo "Errors found"
 | Check all available commands | `agentcl --help` |
 | Check options for a command | `agentcl platform projects --help` |
 | Override server URL for one command | `agentcl --server-url https://agents-staging.kore.ai platform projects list` |
-| Use staging vs production | Set `AGENTS_URL` per shell session |
+| Use staging vs production | Run `agentcl platform connect --server-url <url>` once per project directory |
 | See which state file is active | `agentcl context show` |
 | Use global context on a shared server | `agentcl context set-project --project-id <id> --global` |
 
@@ -348,8 +349,11 @@ agentcl debug get-errors && echo "No errors" || echo "Errors found"
 
 ## Context State Files
 
-| Location | Scope | Created by |
+| Location | Contents | Created by |
 |---|---|---|
-| `.arch/state.json` | Project-local (gitignored) | `agentcl context set-project` |
-| `~/.config/kore-platform/cli-state.json` | Global user | `agentcl context set-project --global` |
-| `.arch/credentials.json` (in project directory) | Auth credentials | `agentcl platform connect` |
+| `.arch/state.json` | `serverUrl`, `projectId`, `sessionId` | `agentcl platform connect`, `agentcl context set-project` |
+| `.arch/credentials.json` | Auth token, expiry, email | `agentcl platform connect` |
+| `~/.config/kore-platform/cli-state.json` | Global `projectId`/`sessionId` fallback | `agentcl context set-project --global` |
+| `~/.config/kore-platform/credentials.json` | Global credential fallback | Legacy / prior versions |
+
+Both `.arch/` files are gitignored. Each project directory has its own set, enabling different server URLs and credentials per project.
