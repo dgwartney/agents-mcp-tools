@@ -26,6 +26,57 @@ import {
 
 type Ctx = DebugContext;
 
+interface ToolAblDef {
+  name: string;
+  description: string;
+  endpoint: string;
+  method: string;
+  auth?: string;
+}
+
+/**
+ * Parse HTTP tool definitions from a .tools.abl file.
+ * Extracts name, description, endpoint (combined with base_url), method, and auth.
+ */
+function parseToolsAbl(content: string): ToolAblDef[] {
+  const baseUrlMatch = content.match(/^\s*base_url:\s*["']?([^"'\n]+)["']?/m);
+  const baseUrl = baseUrlMatch?.[1]?.trim().replace(/\/$/, '') ?? '';
+
+  const authMatch = content.match(/^\s*auth:\s*(\S+)/m);
+  const defaultAuth = authMatch?.[1]?.trim();
+
+  const tools: ToolAblDef[] = [];
+
+  // Match tool definitions: name(params) -> returnType
+  const toolPattern = /^(\s*)(\w+)\([^)]*\)\s*->[^\n]+\n((?:(?!\1\S)[\s\S])*?)(?=\n\s*\w+\(|\n*$)/gm;
+  let match: RegExpExecArray | null;
+
+  while ((match = toolPattern.exec(content)) !== null) {
+    const name = match[2];
+    const body = match[3];
+
+    // Skip if this looks like a top-level property not a tool
+    if (!name || name === 'base_url' || name === 'auth' || name === 'timeout' || name === 'retry') continue;
+
+    const descMatch = body.match(/description:\s*["']([^"']+)["']/);
+    const endpointMatch = body.match(/endpoint:\s*["']?([^"'\n]+)["']?/);
+    const methodMatch = body.match(/method:\s*(\S+)/);
+    const toolAuthMatch = body.match(/^(?!.*auth_config).*auth:\s*(\S+)/m);
+
+    const endpoint = endpointMatch?.[1]?.trim() ?? '';
+    const fullEndpoint = endpoint.startsWith('http') ? endpoint : `${baseUrl}${endpoint}`;
+    const method = methodMatch?.[1]?.trim().toUpperCase() ?? 'POST';
+    const auth = toolAuthMatch?.[1]?.trim() ?? defaultAuth;
+    const description = descMatch?.[1]?.trim() ?? `${name} tool`;
+
+    if (fullEndpoint) {
+      tools.push({ name, description, endpoint: fullEndpoint, method, auth });
+    }
+  }
+
+  return tools;
+}
+
 /**
  * Extract the agent name from an ABL DSL string.
  * Matches the first `AGENT: Name` or `SUPERVISOR: Name` declaration.
@@ -492,6 +543,54 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .action((opts) => {
       const projectId = resolveProjectId(opts.projectId) ?? '';
       run(() => platformTools({ action: 'test', projectId, toolId: opts.toolId }, ctx));
+    });
+
+  tools.command('import-abl')
+    .description('Create all HTTP tools defined in a .tools.abl file in the Project Tool Library')
+    .requiredOption('--file <path>', 'Path to .tools.abl file')
+    .option('--project-id <id>', 'Project ID')
+    .option('--dry-run', 'Print what would be created without creating', false)
+    .action((opts) => {
+      const handler = async (): Promise<string> => {
+        const projectId = resolveProjectId(opts.projectId) ?? '';
+        const absPath = resolve(opts.file);
+        if (!existsSync(absPath)) {
+          return JSON.stringify({ success: false, error: `File not found: ${absPath}` });
+        }
+        const content = readFileSync(absPath, 'utf-8');
+        const toolDefs = parseToolsAbl(content);
+        if (toolDefs.length === 0) {
+          return JSON.stringify({ success: false, error: 'No tool definitions found in file' });
+        }
+        if (opts.dryRun) {
+          return JSON.stringify({ success: true, dryRun: true, wouldCreate: toolDefs.map(t => t.name) }, null, 2);
+        }
+        const results: Record<string, unknown>[] = [];
+        for (const tool of toolDefs) {
+          try {
+            const result = await platformTools({
+              action: 'create',
+              projectId,
+              name: tool.name,
+              type: 'http',
+              definition: {
+                toolType: 'http',
+                description: tool.description,
+                endpoint: tool.endpoint,
+                method: tool.method,
+                ...(tool.auth ? { auth: tool.auth } : {}),
+              },
+            }, ctx);
+            const parsed = JSON.parse(result) as { success?: boolean };
+            results.push({ name: tool.name, success: parsed.success ?? false });
+          } catch (err) {
+            results.push({ name: tool.name, success: false, error: err instanceof Error ? err.message : String(err) });
+          }
+        }
+        const allOk = results.every(r => r.success);
+        return JSON.stringify({ success: allOk, created: results }, null, 2);
+      };
+      run(handler);
     });
 
   // ── config ────────────────────────────────────────────────────────────────
