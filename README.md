@@ -18,14 +18,6 @@ npm link
 - **`agentcl`** — the direct CLI (see [CLI Usage](#arch-cli) below)
 - **`agents-mcp-tools`** — the MCP server for Claude Code and other MCP clients
 
-**To update** after pulling changes:
-
-```bash
-cd agents-mcp-tools
-git pull
-npm run build   # npm link only needs to run once
-```
-
 ### MCP Server Configuration
 
 After running `npm link`, add this to your project's `.mcp.json` or `~/.claude/settings.json`:
@@ -66,6 +58,24 @@ agentcl platform projects list
 | Local       | `http://localhost:3112`          |
 
 Set `AGENTS_URL` in the `env` block, or pass `serverUrl` directly to `platform_connect`.
+
+## Updating
+
+To pick up new changes from the repository:
+
+```bash
+cd agents-mcp-tools
+git pull
+npm run build
+```
+
+`npm link` only needs to run once. The global symlink points to the compiled output in `dist/` — rebuilding is all that's needed to update both `agentcl` and `agents-mcp-tools`.
+
+Verify the update took effect:
+
+```bash
+agentcl --version
+```
 
 ## Tools
 
