@@ -15,7 +15,7 @@ npm link
 ```
 
 `npm link` registers both binaries as global commands:
-- **`arch`** — the direct CLI (see [CLI Usage](#arch-cli) below)
+- **`agentcl`** — the direct CLI (see [CLI Usage](#arch-cli) below)
 - **`agents-mcp-tools`** — the MCP server for Claude Code and other MCP clients
 
 **To update** after pulling changes:
@@ -45,14 +45,14 @@ After running `npm link`, add this to your project's `.mcp.json` or `~/.claude/s
 
 Existing configs that use an MCP server key like `agent-platform-debug` can keep that key; the key is local client configuration.
 
-### `arch` CLI
+### `agentcl` CLI
 
-The `arch` binary is also available after `npm link`. See [TUTORIAL.md](TUTORIAL.md) for a full walkthrough and [USER-GUIDE.md](USER-GUIDE.md) for command reference.
+The `agentcl` binary is also available after `npm link`. See [TUTORIAL.md](TUTORIAL.md) for a full walkthrough and [USER-GUIDE.md](USER-GUIDE.md) for command reference.
 
 ```bash
-arch --help
-arch platform connect
-arch platform projects list
+agentcl --help
+agentcl platform connect
+agentcl platform projects list
 ```
 
 ### Environment URLs

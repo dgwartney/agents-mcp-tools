@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// bin/arch.ts
-// Arch CLI — AWS-CLI-style interface to the Arch MCP tools
-// Usage: arch <platform|debug> <command> [flags]
+// bin/agentcl.ts
+// agentcl — AWS-CLI-style interface to the Arch MCP tools
+// Usage: agentcl <platform|debug> <command> [flags]
 
 import { Command } from 'commander';
 import { buildCliContext } from '../src/cli/context.js';
@@ -13,8 +13,8 @@ async function main(): Promise<void> {
   const program = new Command();
 
   program
-    .name('arch')
-    .description('Arch CLI — direct access to Arch Agent Platform tools')
+    .name('agentcl')
+    .description('agentcl — direct access to Arch Agent Platform tools')
     .version('1.0.0')
     .option('--server-url <url>', 'Server URL (overrides AGENTS_URL env var)');
 

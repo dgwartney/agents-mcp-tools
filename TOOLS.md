@@ -1,6 +1,6 @@
 # Arch MCP Tools Reference
 
-Complete reference for all 39 tools exposed by the Arch MCP server and `arch` CLI.
+Complete reference for all 39 tools exposed by the Arch MCP server and `agentcl` CLI.
 
 **Authentication:** All tools require connection to the Arch platform. Set `AGENTS_URL` env var or use `--server-url` flag.
 
@@ -11,7 +11,7 @@ Complete reference for all 39 tools exposed by the Arch MCP server and `arch` CL
 ### platform_connect
 Connect to the server and authenticate. Auth cascade: explicit token → stored credentials → device auth (browser).
 
-**CLI:** `arch platform connect [--server-url <url>] [--auth-token <token>] [--force] [--device-code <code>]`
+**CLI:** `agentcl platform connect [--server-url <url>] [--auth-token <token>] [--force] [--device-code <code>]`
 
 **Parameters:**
 | Parameter | Type | Required | Description |
@@ -26,7 +26,7 @@ Connect to the server and authenticate. Auth cascade: explicit token → stored 
 ### platform_projects
 Manage projects on the platform.
 
-**CLI:** `arch platform projects <list|get|create|update|delete> [flags]`
+**CLI:** `agentcl platform projects <list|get|create|update|delete> [flags]`
 
 **Actions & required flags:**
 | Action | Required flags | Optional flags |
@@ -42,7 +42,7 @@ Manage projects on the platform.
 ### platform_agents
 Manage agents within a project.
 
-**CLI:** `arch platform agents <list|get|save-dsl> [flags]`
+**CLI:** `agentcl platform agents <list|get|save-dsl> [flags]`
 
 **Actions & required flags:**
 | Action | Required flags | Optional flags |
@@ -56,7 +56,7 @@ Manage agents within a project.
 ### platform_versions
 Manage agent versions.
 
-**CLI:** `arch platform versions <list|create|get|promote|diff> [flags]`
+**CLI:** `agentcl platform versions <list|create|get|promote|diff> [flags]`
 
 **Actions & required flags:**
 | Action | Required flags | Optional flags |
@@ -72,7 +72,7 @@ Manage agent versions.
 ### platform_deployments
 Manage deployments.
 
-**CLI:** `arch platform deployments <list|create|get|retire|rollback> [flags]`
+**CLI:** `agentcl platform deployments <list|create|get|retire|rollback> [flags]`
 
 **Actions & required flags:**
 | Action | Required flags | Optional flags |
@@ -88,7 +88,7 @@ Manage deployments.
 ### platform_tools
 Manage tools within a project.
 
-**CLI:** `arch platform tools <list|get|create|update|delete|test> [flags]`
+**CLI:** `agentcl platform tools <list|get|create|update|delete|test> [flags]`
 
 **Actions & required flags:**
 | Action | Required flags | Optional flags |
@@ -105,7 +105,7 @@ Manage tools within a project.
 ### platform_config
 Manage project configuration and LLM settings.
 
-**CLI:** `arch platform config <get-settings|update-settings|get-llm-config|update-llm-config> [flags]`
+**CLI:** `agentcl platform config <get-settings|update-settings|get-llm-config|update-llm-config> [flags]`
 
 **Actions & required flags:**
 | Action | Required flags | Optional flags |
@@ -120,7 +120,7 @@ Manage project configuration and LLM settings.
 ### platform_workspaces
 Manage workspaces (tenants).
 
-**CLI:** `arch platform workspaces <list|current|switch> [flags]`
+**CLI:** `agentcl platform workspaces <list|current|switch> [flags]`
 
 **Actions & required flags:**
 | Action | Required flags | Optional flags |
@@ -134,7 +134,7 @@ Manage workspaces (tenants).
 ### platform_import_export
 Import and export projects.
 
-**CLI:** `arch platform import-export <export-preview|export|import-preview|import> [flags]`
+**CLI:** `agentcl platform import-export <export-preview|export|import-preview|import> [flags]`
 
 **Actions & required flags:**
 | Action | Required flags | Optional flags |
@@ -149,7 +149,7 @@ Import and export projects.
 ### platform_validate_package
 Validate a local ABL project package using the platform compiler.
 
-**CLI:** `arch platform validate-package [--path <path>] [--project-id <id>]`
+**CLI:** `agentcl platform validate-package [--path <path>] [--project-id <id>]`
 
 **Parameters:**
 | Parameter | Type | Required | Description |
@@ -162,7 +162,7 @@ Validate a local ABL project package using the platform compiler.
 ### platform_package_model
 Show the platform compiler's parsed model for a local package.
 
-**CLI:** `arch platform package-model [--path <path>] [--project-id <id>]`
+**CLI:** `agentcl platform package-model [--path <path>] [--project-id <id>]`
 
 **Parameters:**
 | Parameter | Type | Required | Description |
@@ -175,7 +175,7 @@ Show the platform compiler's parsed model for a local package.
 ### platform_eval_personas
 Manage eval personas.
 
-**CLI:** `arch platform evals personas <list|get|create|update|delete|templates|generate> [flags]`
+**CLI:** `agentcl platform evals personas <list|get|create|update|delete|templates|generate> [flags]`
 
 **Parameters:** `--project-id` (required), `--persona-id` (for get/update/delete), `--body <json>` (for create/update/generate), `--confirm` (for delete)
 
@@ -184,7 +184,7 @@ Manage eval personas.
 ### platform_eval_scenarios
 Manage eval scenarios.
 
-**CLI:** `arch platform evals scenarios <list|get|create|update|delete|generate> [flags]`
+**CLI:** `agentcl platform evals scenarios <list|get|create|update|delete|generate> [flags]`
 
 **Parameters:** `--project-id` (required), `--scenario-id` (for get/update/delete), `--body <json>` (for create/update/generate), `--confirm` (for delete)
 
@@ -193,7 +193,7 @@ Manage eval scenarios.
 ### platform_eval_evaluators
 Manage eval evaluators.
 
-**CLI:** `arch platform evals evaluators <list|get|create|update|delete|templates> [flags]`
+**CLI:** `agentcl platform evals evaluators <list|get|create|update|delete|templates> [flags]`
 
 **Parameters:** `--project-id` (required), `--evaluator-id` (for get/update/delete), `--body <json>` (for create/update), `--confirm` (for delete)
 
@@ -202,7 +202,7 @@ Manage eval evaluators.
 ### platform_eval_sets
 Manage eval sets.
 
-**CLI:** `arch platform evals sets <list|get|create|update|delete> [flags]`
+**CLI:** `agentcl platform evals sets <list|get|create|update|delete> [flags]`
 
 **Parameters:** `--project-id` (required), `--set-id` (for get/update/delete), `--body <json>` (for create/update)
 
@@ -211,7 +211,7 @@ Manage eval sets.
 ### platform_eval_runs
 Manage eval runs.
 
-**CLI:** `arch platform evals runs <list|get|create|update|start|cancel|status|heatmap|cases|compare|preflight|quick> [flags]`
+**CLI:** `agentcl platform evals runs <list|get|create|update|start|cancel|status|heatmap|cases|compare|preflight|quick> [flags]`
 
 **Parameters:** `--project-id` (required), `--run-id` (for single-run actions), `--run-ids <id1,id2>` (for compare), `--body <json>` (for create/update/quick)
 
@@ -222,7 +222,7 @@ Manage eval runs.
 ### debug_list_agents
 List all available agents from the server.
 
-**CLI:** `arch debug list-agents [--domain <domain>]`
+**CLI:** `agentcl debug list-agents [--domain <domain>]`
 
 **Parameters:**
 | Parameter | Type | Required | Description |
@@ -234,7 +234,7 @@ List all available agents from the server.
 ### debug_load_agent
 Load an agent and create a debug session.
 
-**CLI:** `arch debug load-agent --agent-path <domain/name> --project-id <id>`
+**CLI:** `agentcl debug load-agent --agent-path <domain/name> --project-id <id>`
 
 **Parameters:**
 | Parameter | Type | Required | Description |
@@ -247,7 +247,7 @@ Load an agent and create a debug session.
 ### debug_send_message
 Send a message to the loaded agent.
 
-**CLI:** `arch debug send-message --text <text> [--session-id <id>] [--wait-for-response] [--timeout <ms>]`
+**CLI:** `agentcl debug send-message --text <text> [--session-id <id>] [--wait-for-response] [--timeout <ms>]`
 
 **Parameters:**
 | Parameter | Type | Required | Description |
@@ -262,7 +262,7 @@ Send a message to the loaded agent.
 ### debug_traces
 Get and search trace events.
 
-**CLI:** `arch debug traces [--text <text>] [--types <t1,t2>] [--agent-name <name>] [--has-error] [--session-id <id>] [--project-id <id>] [--limit <n>]`
+**CLI:** `agentcl debug traces [--text <text>] [--types <t1,t2>] [--agent-name <name>] [--has-error] [--session-id <id>] [--project-id <id>] [--limit <n>]`
 
 **Parameters:**
 | Parameter | Type | Required | Description |
@@ -280,105 +280,105 @@ Get and search trace events.
 ### debug_get_current_state
 Get current agent state.
 
-**CLI:** `arch debug get-current-state [--session-id <id>] [--project-id <id>]`
+**CLI:** `agentcl debug get-current-state [--session-id <id>] [--project-id <id>]`
 
 ---
 
 ### debug_get_span_tree
 Get hierarchical span tree showing execution flow.
 
-**CLI:** `arch debug get-span-tree [--session-id <id>] [--project-id <id>] [--flat]`
+**CLI:** `agentcl debug get-span-tree [--session-id <id>] [--project-id <id>] [--flat]`
 
 ---
 
 ### debug_get_errors
 Get all errors and warnings from the session.
 
-**CLI:** `arch debug get-errors [--session-id <id>] [--project-id <id>] [--include-warnings]`
+**CLI:** `agentcl debug get-errors [--session-id <id>] [--project-id <id>] [--include-warnings]`
 
 ---
 
 ### debug_explain_decision
 Get detailed explanation of a decision event.
 
-**CLI:** `arch debug explain-decision [--event-id <id>] [--session-id <id>] [--project-id <id>] [--last-n <n>] [--turn <n>] [--type <type>]`
+**CLI:** `agentcl debug explain-decision [--event-id <id>] [--session-id <id>] [--project-id <id>] [--last-n <n>] [--turn <n>] [--type <type>]`
 
 ---
 
 ### debug_get_flow_graph
 Get the execution graph for an agent.
 
-**CLI:** `arch debug get-flow-graph [--session-id <id>] [--project-id <id>] [--format json|mermaid] [--include-app-graph]`
+**CLI:** `agentcl debug get-flow-graph [--session-id <id>] [--project-id <id>] [--format json|mermaid] [--include-app-graph]`
 
 ---
 
 ### debug_list_active_sessions
 List all active sessions on the server.
 
-**CLI:** `arch debug list-active-sessions`
+**CLI:** `agentcl debug list-active-sessions`
 
 ---
 
 ### debug_session
 Subscribe to or unsubscribe from a session's trace events.
 
-**CLI:** `arch debug session <subscribe|unsubscribe> --session-id <id>`
+**CLI:** `agentcl debug session <subscribe|unsubscribe> --session-id <id>`
 
 ---
 
 ### debug_docs
 Get or search Agent ABL documentation.
 
-**CLI:** `arch debug docs [--topic <topic>] [--query <query>]`
+**CLI:** `agentcl debug docs [--topic <topic>] [--query <query>]`
 
 ---
 
 ### debug_analyze_session
 Get automated analysis and diagnostics for a session.
 
-**CLI:** `arch debug analyze-session [--session-id <id>] [--project-id <id>]`
+**CLI:** `agentcl debug analyze-session [--session-id <id>] [--project-id <id>]`
 
 ---
 
 ### debug_diagnostic_layer
 Build layered causal diagnostic view for a session.
 
-**CLI:** `arch debug diagnostic-layer [--session-id <id>] [--project-id <id>] [--trace-limit <n>]`
+**CLI:** `agentcl debug diagnostic-layer [--session-id <id>] [--project-id <id>] [--trace-limit <n>]`
 
 ---
 
 ### debug_get_trace_event
 Fetch one trace event by ID.
 
-**CLI:** `arch debug get-trace-event --event-id <id> [--session-id <id>] [--project-id <id>] [--trace-limit <n>] [--include-data] [--include-nearby]`
+**CLI:** `agentcl debug get-trace-event --event-id <id> [--session-id <id>] [--project-id <id>] [--trace-limit <n>] [--include-data] [--include-nearby]`
 
 ---
 
 ### debug_explain_trace_event
 Explain one trace event.
 
-**CLI:** `arch debug explain-trace-event --event-id <id> [--session-id <id>] [--project-id <id>] [--trace-limit <n>]`
+**CLI:** `agentcl debug explain-trace-event --event-id <id> [--session-id <id>] [--project-id <id>] [--trace-limit <n>]`
 
 ---
 
 ### debug_model_interactions
 Summarize model-provider interactions for a session.
 
-**CLI:** `arch debug model-interactions [--session-id <id>] [--project-id <id>] [--trace-limit <n>] [--include-timeline]`
+**CLI:** `agentcl debug model-interactions [--session-id <id>] [--project-id <id>] [--trace-limit <n>] [--include-timeline]`
 
 ---
 
 ### debug_realtime_interactions
 Summarize realtime voice/model provider interactions.
 
-**CLI:** `arch debug realtime-interactions [--session-id <id>] [--project-id <id>] [--trace-limit <n>] [--include-timeline]`
+**CLI:** `agentcl debug realtime-interactions [--session-id <id>] [--project-id <id>] [--trace-limit <n>] [--include-timeline]`
 
 ---
 
 ### debug_harness_logs
 Download and parse Harness CI execution logs. Requires `HARNESS_API_KEY` env var.
 
-**CLI:** `arch debug harness-logs --execution-id <id> --run-sequence <n> --stage-id <id> --step-id <id> [--pipeline-id <id>] [--filter <regex>] [--tail <n>]`
+**CLI:** `agentcl debug harness-logs --execution-id <id> --run-sequence <n> --stage-id <id> --step-id <id> [--pipeline-id <id>] [--filter <regex>] [--tail <n>]`
 
 **Parameters:**
 | Parameter | Type | Required | Description |
@@ -396,28 +396,28 @@ Download and parse Harness CI execution logs. Requires `HARNESS_API_KEY` env var
 ### debug_diagnose
 Run full diagnostic analysis on an agent or session.
 
-**CLI:** `arch debug diagnose [--session-id <id>] [--agent-name <name>] [--project-id <id>] [--depth quick|standard|deep] [--config-only]`
+**CLI:** `agentcl debug diagnose [--session-id <id>] [--agent-name <name>] [--project-id <id>] [--depth quick|standard|deep] [--config-only]`
 
 ---
 
 ### debug_lint_abl
 Run ABL design and repair lint checks.
 
-**CLI:** `arch debug lint-abl [--path <path>]`
+**CLI:** `agentcl debug lint-abl [--path <path>]`
 
 ---
 
 ### debug_why_transcript_failed
 Correlate transcript failures with ABL diagnoses.
 
-**CLI:** `arch debug why-transcript-failed [--path <path>] [--transcript-path <path>]`
+**CLI:** `agentcl debug why-transcript-failed [--path <path>] [--transcript-path <path>]`
 
 ---
 
 ### debug_diagnose_transcript
 Alias for `debug_why_transcript_failed`. Accepts identical parameters.
 
-**CLI:** `arch debug why-transcript-failed` (CLI exposes this via the canonical command)
+**CLI:** `agentcl debug why-transcript-failed` (CLI exposes this via the canonical command)
 
 ---
 
@@ -430,9 +430,9 @@ Alias for `debug_why_transcript_failed`. Accepts identical parameters.
 
 ## Authentication
 
-The `arch` CLI uses the same three-stage auth cascade as the MCP server:
+The `agentcl` CLI uses the same three-stage auth cascade as the MCP server:
 
-1. **Explicit token** — pass `--auth-token <jwt>` to `arch platform connect`
+1. **Explicit token** — pass `--auth-token <jwt>` to `agentcl platform connect`
 2. **Stored credentials** — reads from `~/.config/kore-platform/credentials.json`
 3. **Device authorization** — opens browser automatically, polls until approved
 

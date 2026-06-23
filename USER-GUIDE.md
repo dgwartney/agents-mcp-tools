@@ -1,12 +1,12 @@
 # Arch CLI — User Guide
 
-The `arch` CLI gives you direct shell access to the Arch Agent Platform without requiring an LLM. It follows AWS CLI conventions: `arch <group> <command> [flags]`.
+The `agentcl` CLI gives you direct shell access to the Arch Agent Platform without requiring an LLM. It follows AWS CLI conventions: `agentcl <group> <command> [flags]`.
 
 ---
 
 ## Installation
 
-The `arch` CLI is built from source and installed globally via `npm link`:
+The `agentcl` CLI is built from source and installed globally via `npm link`:
 
 ```bash
 git clone git@github.com:dgwartney/agents-mcp-tools.git
@@ -19,7 +19,7 @@ npm link
 `npm link` registers the compiled binary as a global command. Verify it works:
 
 ```bash
-arch --help
+agentcl --help
 ```
 
 **To update** when the repo changes:
@@ -43,7 +43,7 @@ export AGENTS_URL=https://agents.kore.ai
 Then authenticate (opens browser on first run):
 
 ```bash
-arch platform connect
+agentcl platform connect
 ```
 
 On first run this opens your browser and waits for you to approve. Credentials are saved to `~/.config/kore-platform/credentials.json` for future sessions — you won't need to log in again until the token expires.
@@ -51,14 +51,14 @@ On first run this opens your browser and waits for you to approve. Credentials a
 To connect to a different server for a single command:
 
 ```bash
-arch platform connect --server-url https://agents-staging.kore.ai
-arch --server-url https://agents-staging.kore.ai platform projects list
+agentcl platform connect --server-url https://agents-staging.kore.ai
+agentcl --server-url https://agents-staging.kore.ai platform projects list
 ```
 
 To force re-authentication:
 
 ```bash
-arch platform connect --force
+agentcl platform connect --force
 ```
 
 ---
@@ -72,10 +72,10 @@ Most commands need a `--project-id`. Set it once per project directory so you do
 cd my-agent-project
 
 # Save default project ID (writes to .arch/state.json)
-arch context set-project --project-id proj-abc123
+agentcl context set-project --project-id proj-abc123
 
 # Verify
-arch context show
+agentcl context show
 ```
 
 Output:
@@ -91,29 +91,29 @@ Output:
 Now every command in this directory resolves `--project-id` automatically:
 
 ```bash
-arch platform agents list          # no --project-id needed
-arch platform versions list --agent-name booking-agent
-arch debug traces
+agentcl platform agents list          # no --project-id needed
+agentcl platform versions list --agent-name booking-agent
+agentcl debug traces
 ```
 
 To set a **global** default (used when no project-local state exists):
 
 ```bash
-arch context set-project --project-id proj-abc123 --global
+agentcl context set-project --project-id proj-abc123 --global
 ```
 
 To save the active debug session:
 
 ```bash
-arch context set-session --session-id sess-xyz789
-arch debug get-current-state       # uses saved session ID
-arch debug get-errors              # same
+agentcl context set-session --session-id sess-xyz789
+agentcl debug get-current-state       # uses saved session ID
+agentcl debug get-errors              # same
 ```
 
 To clear saved context:
 
 ```bash
-arch context clear
+agentcl context clear
 ```
 
 ---
@@ -122,19 +122,19 @@ arch context clear
 
 ```bash
 # List all projects
-arch platform projects list
+agentcl platform projects list
 
 # Get project details
-arch platform projects get --project-id proj-abc123
+agentcl platform projects get --project-id proj-abc123
 
 # Create a new project
-arch platform projects create --name "Hotel Booking Agent" --description "Handles hotel reservations"
+agentcl platform projects create --name "Hotel Booking Agent" --description "Handles hotel reservations"
 
 # Update project entry agent
-arch platform projects update --project-id proj-abc123 --entry-agent-name booking_agent
+agentcl platform projects update --project-id proj-abc123 --entry-agent-name booking_agent
 
 # Delete a project (requires --confirm)
-arch platform projects delete --project-id proj-abc123 --confirm
+agentcl platform projects delete --project-id proj-abc123 --confirm
 ```
 
 ---
@@ -143,32 +143,32 @@ arch platform projects delete --project-id proj-abc123 --confirm
 
 ```bash
 # List agents in the current project
-arch platform agents list
+agentcl platform agents list
 
 # Get agent DSL
-arch platform agents get --agent-name booking_agent
+agentcl platform agents get --agent-name booking_agent
 
 # Update agent DSL from a file
-arch platform agents save-dsl \
+agentcl platform agents save-dsl \
   --agent-name booking_agent \
   --dsl-content "$(cat booking_agent.abl)"
 
 # List versions
-arch platform versions list --agent-name booking_agent
+agentcl platform versions list --agent-name booking_agent
 
 # Create a new version
-arch platform versions create \
+agentcl platform versions create \
   --agent-name booking_agent \
   --changelog "Fix RESPOND handling in finalize step"
 
 # Promote version to production
-arch platform versions promote \
+agentcl platform versions promote \
   --agent-name booking_agent \
   --version 3 \
   --status production
 
 # Diff two versions
-arch platform versions diff \
+agentcl platform versions diff \
   --agent-name booking_agent \
   --version 3 \
   --other-version 2
@@ -180,22 +180,22 @@ arch platform versions diff \
 
 ```bash
 # List deployments
-arch platform deployments list
+agentcl platform deployments list
 
 # Create a deployment
-arch platform deployments create \
+agentcl platform deployments create \
   --environment production \
   --label "v3 release" \
   --entry-agent-name booking_agent \
   --agent-version-manifest '{"booking_agent": 3}'
 
 # Retire a deployment
-arch platform deployments retire \
+agentcl platform deployments retire \
   --deployment-id dep-abc \
   --confirm
 
 # Rollback
-arch platform deployments rollback \
+agentcl platform deployments rollback \
   --deployment-id dep-abc \
   --confirm
 ```
@@ -206,13 +206,13 @@ arch platform deployments rollback \
 
 ```bash
 # Validate an ABL project folder
-arch platform validate-package --path ./my-agent-project
+agentcl platform validate-package --path ./my-agent-project
 
 # Show the compiler's parsed model
-arch platform package-model --path ./my-agent-project
+agentcl platform package-model --path ./my-agent-project
 
 # Run lint checks
-arch debug lint-abl --path ./my-agent-project
+agentcl debug lint-abl --path ./my-agent-project
 ```
 
 ---
@@ -221,42 +221,42 @@ arch debug lint-abl --path ./my-agent-project
 
 ```bash
 # List active sessions on the server
-arch debug list-active-sessions
+agentcl debug list-active-sessions
 
 # Save session to context
-arch context set-session --session-id sess-xyz789
+agentcl context set-session --session-id sess-xyz789
 
 # Get current agent state
-arch debug get-current-state
+agentcl debug get-current-state
 
 # Get span tree (execution flow)
-arch debug get-span-tree
+agentcl debug get-span-tree
 
 # Get span tree as flat list
-arch debug get-span-tree --flat
+agentcl debug get-span-tree --flat
 
 # Get errors and warnings
-arch debug get-errors --include-warnings
+agentcl debug get-errors --include-warnings
 
 # Search trace events
-arch debug traces --text "RESPOND" --limit 20
-arch debug traces --types "DECISION,ERROR" --limit 50
-arch debug traces --has-error
+agentcl debug traces --text "RESPOND" --limit 20
+agentcl debug traces --types "DECISION,ERROR" --limit 50
+agentcl debug traces --has-error
 
 # Get flow graph as Mermaid diagram
-arch debug get-flow-graph --format mermaid
+agentcl debug get-flow-graph --format mermaid
 
 # Explain a specific decision
-arch debug explain-decision --event-id evt-abc123
+agentcl debug explain-decision --event-id evt-abc123
 
 # Full automated diagnosis
-arch debug diagnose --depth deep
+agentcl debug diagnose --depth deep
 
 # Analyze session
-arch debug analyze-session
+agentcl debug analyze-session
 
 # Diagnostic layer (root-cause grouping)
-arch debug diagnostic-layer
+agentcl debug diagnostic-layer
 ```
 
 ---
@@ -265,23 +265,23 @@ arch debug diagnostic-layer
 
 ```bash
 # List personas
-arch platform evals personas list
+agentcl platform evals personas list
 
 # Create a scenario
-arch platform evals scenarios create \
+agentcl platform evals scenarios create \
   --body '{"name":"Happy path booking","turns":[{"user":"Book a hotel in NYC"}]}'
 
 # List eval runs
-arch platform evals runs list
+agentcl platform evals runs list
 
 # Start a run
-arch platform evals runs start --run-id run-abc123
+agentcl platform evals runs start --run-id run-abc123
 
 # Check run status
-arch platform evals runs status --run-id run-abc123
+agentcl platform evals runs status --run-id run-abc123
 
 # Compare two runs
-arch platform evals runs compare --run-ids run-abc,run-def
+agentcl platform evals runs compare --run-ids run-abc,run-def
 ```
 
 ---
@@ -290,16 +290,16 @@ arch platform evals runs compare --run-ids run-abc,run-def
 
 ```bash
 # Preview what an export would include
-arch platform import-export export-preview
+agentcl platform import-export export-preview
 
 # Export project to a directory
-arch platform import-export export --path ./export-output
+agentcl platform import-export export --path ./export-output
 
 # Preview an import (dry run)
-arch platform import-export import-preview --path ./export-output
+agentcl platform import-export import-preview --path ./export-output
 
 # Apply the import
-arch platform import-export import \
+agentcl platform import-export import \
   --path ./export-output \
   --confirm
 ```
@@ -312,13 +312,13 @@ All commands output pretty-printed JSON to stdout. Use `jq` to extract fields:
 
 ```bash
 # Get just the project IDs
-arch platform projects list | jq '.[].id'
+agentcl platform projects list | jq '.[].id'
 
 # Get the latest version number for an agent
-arch platform versions list --agent-name booking_agent | jq 'max_by(.version).version'
+agentcl platform versions list --agent-name booking_agent | jq 'max_by(.version).version'
 
 # Check if any errors exist (exit code 1 on {"success":false})
-arch debug get-errors && echo "No errors" || echo "Errors found"
+agentcl debug get-errors && echo "No errors" || echo "Errors found"
 ```
 
 ---
@@ -327,12 +327,12 @@ arch debug get-errors && echo "No errors" || echo "Errors found"
 
 | Tip | Command |
 |---|---|
-| Check all available commands | `arch --help` |
-| Check options for a command | `arch platform projects --help` |
-| Override server URL for one command | `arch --server-url https://agents-staging.kore.ai platform projects list` |
+| Check all available commands | `agentcl --help` |
+| Check options for a command | `agentcl platform projects --help` |
+| Override server URL for one command | `agentcl --server-url https://agents-staging.kore.ai platform projects list` |
 | Use staging vs production | Set `AGENTS_URL` per shell session |
-| See which state file is active | `arch context show` |
-| Use global context on a shared server | `arch context set-project --project-id <id> --global` |
+| See which state file is active | `agentcl context show` |
+| Use global context on a shared server | `agentcl context set-project --project-id <id> --global` |
 
 ---
 
@@ -341,7 +341,7 @@ arch debug get-errors && echo "No errors" || echo "Errors found"
 | Variable | Description |
 |---|---|
 | `AGENTS_URL` | Default server URL (e.g. `https://agents.kore.ai`) |
-| `HARNESS_API_KEY` | Required for `arch debug harness-logs` |
+| `HARNESS_API_KEY` | Required for `agentcl debug harness-logs` |
 | `XDG_CONFIG_HOME` | Override config directory (default: `~/.config`) |
 
 ---
@@ -350,6 +350,6 @@ arch debug get-errors && echo "No errors" || echo "Errors found"
 
 | Location | Scope | Created by |
 |---|---|---|
-| `.arch/state.json` | Project-local (gitignored) | `arch context set-project` |
-| `~/.config/kore-platform/cli-state.json` | Global user | `arch context set-project --global` |
-| `~/.config/kore-platform/credentials.json` | Auth credentials | `arch platform connect` |
+| `.arch/state.json` | Project-local (gitignored) | `agentcl context set-project` |
+| `~/.config/kore-platform/cli-state.json` | Global user | `agentcl context set-project --global` |
+| `~/.config/kore-platform/credentials.json` | Auth credentials | `agentcl platform connect` |

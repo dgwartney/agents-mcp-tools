@@ -32,7 +32,7 @@ Three agents work together:
 
 ## Part 1: Install the CLI
 
-The `arch` CLI is installed globally by building from source and using `npm link`:
+The `agentcl` CLI is installed globally by building from source and using `npm link`:
 
 ```bash
 git clone git@github.com:dgwartney/agents-mcp-tools.git
@@ -43,20 +43,20 @@ npm link
 cd ..           # return to your project directory
 ```
 
-`npm link` creates a global symlink from your system's bin directory to the compiled binary, making `arch` available in any shell without a path prefix.
+`npm link` creates a global symlink from your system's bin directory to the compiled binary, making `agentcl` available in any shell without a path prefix.
 
 Verify it works:
 
 ```bash
-arch --help
+agentcl --help
 ```
 
 You should see:
 
 ```
-Usage: arch [options] [command]
+Usage: agentcl [options] [command]
 
-Arch CLI — direct access to Arch Agent Platform tools
+agentcl — direct access to Arch Agent Platform tools
 
 Commands:
   platform   Manage Arch platform resources
@@ -80,7 +80,7 @@ Connect to the Arch platform and authenticate:
 
 ```bash
 export AGENTS_URL=https://agents.kore.ai
-arch platform connect
+agentcl platform connect
 ```
 
 On the first run, your browser opens automatically. Log in and approve the device request. Your credentials are saved to `~/.config/kore-platform/credentials.json` — future commands authenticate silently.
@@ -88,7 +88,7 @@ On the first run, your browser opens automatically. Log in and approve the devic
 Verify authentication worked:
 
 ```bash
-arch platform workspaces current
+agentcl platform workspaces current
 ```
 
 ---
@@ -131,7 +131,7 @@ gh repo create hotel-booking-agent --public --source=. --remote=origin --push
 Create a project on the Arch platform and save the project ID to your local context:
 
 ```bash
-arch platform projects create \
+agentcl platform projects create \
   --name "Hotel Booking Agent" \
   --description "Multi-agent hotel search and booking system"
 ```
@@ -140,13 +140,13 @@ The output shows the new project ID. Save it to your local context so you don't 
 
 ```bash
 # Replace proj-abc123 with your actual project ID from the output above
-arch context set-project --project-id proj-abc123
+agentcl context set-project --project-id proj-abc123
 ```
 
 Verify:
 
 ```bash
-arch context show
+agentcl context show
 ```
 
 ---
@@ -550,21 +550,21 @@ git commit -m "feat: add coordinator supervisor agent"
 
 ## Part 9: Register Agents on the Platform
 
-Save each agent's DSL to the platform using the `arch` CLI. The CLI reads the ABL files and uploads them. The tools file is compiled automatically as part of each agent's DSL.
+Save each agent's DSL to the platform using the `agentcl` CLI. The CLI reads the ABL files and uploads them. The tools file is compiled automatically as part of each agent's DSL.
 
 ```bash
 # Register the hotel search agent
-arch platform agents save-dsl \
+agentcl platform agents save-dsl \
   --agent-name hotel_search \
   --dsl-content "$(cat agents/hotel_search.agent.abl)"
 
 # Register the hotel booking agent
-arch platform agents save-dsl \
+agentcl platform agents save-dsl \
   --agent-name hotel_booking \
   --dsl-content "$(cat agents/hotel_booking.agent.abl)"
 
 # Register the coordinator supervisor
-arch platform agents save-dsl \
+agentcl platform agents save-dsl \
   --agent-name hotel_coordinator \
   --dsl-content "$(cat agents/coordinator.supervisor.abl)"
 ```
@@ -572,13 +572,13 @@ arch platform agents save-dsl \
 Validate the package compiles correctly:
 
 ```bash
-arch platform validate-package --path .
+agentcl platform validate-package --path .
 ```
 
 Review the compiler's view of your agents:
 
 ```bash
-arch platform package-model --path .
+agentcl platform package-model --path .
 ```
 
 ---
@@ -592,15 +592,15 @@ Bundle your agents into a versioned release and deploy to the staging environmen
 Each agent needs its own version snapshot before you can bundle them into a deployment:
 
 ```bash
-arch platform versions create \
+agentcl platform versions create \
   --agent-name hotel_search \
   --changelog "Initial release: hotel search with REST API tools"
 
-arch platform versions create \
+agentcl platform versions create \
   --agent-name hotel_booking \
   --changelog "Initial release: hotel booking with confirmation gate"
 
-arch platform versions create \
+agentcl platform versions create \
   --agent-name hotel_coordinator \
   --changelog "Initial release: supervisor routing search and booking agents"
 ```
@@ -608,9 +608,9 @@ arch platform versions create \
 Verify all versions were created:
 
 ```bash
-arch platform versions list --agent-name hotel_search
-arch platform versions list --agent-name hotel_booking
-arch platform versions list --agent-name hotel_coordinator
+agentcl platform versions list --agent-name hotel_search
+agentcl platform versions list --agent-name hotel_booking
+agentcl platform versions list --agent-name hotel_coordinator
 ```
 
 All three should show version `1`. Note the numbers — you will reference them in the deployment manifest.
@@ -618,7 +618,7 @@ All three should show version `1`. Note the numbers — you will reference them 
 ### Deploy to staging
 
 ```bash
-arch platform deployments create \
+agentcl platform deployments create \
   --label "v1.0 — staging" \
   --environment staging \
   --entry-agent-name hotel_coordinator \
@@ -645,7 +645,7 @@ git commit -m "feat(search): show top 5 results with comparison table"
 ### Step 3 — Push the update to the platform
 
 ```bash
-arch platform agents save-dsl \
+agentcl platform agents save-dsl \
   --agent-name hotel_search \
   --dsl-content "$(cat agents/hotel_search.agent.abl)"
 ```
@@ -653,13 +653,13 @@ arch platform agents save-dsl \
 ### Step 4 — Validate
 
 ```bash
-arch platform validate-package --path .
+agentcl platform validate-package --path .
 ```
 
 ### Step 5 — Create version 2
 
 ```bash
-arch platform versions create \
+agentcl platform versions create \
   --agent-name hotel_search \
   --changelog "Show top 5 results with side-by-side comparison table"
 ```
@@ -667,14 +667,14 @@ arch platform versions create \
 Confirm version 2 exists before building the deployment manifest:
 
 ```bash
-arch platform versions list --agent-name hotel_search
+agentcl platform versions list --agent-name hotel_search
 # Should show version 1 (original) and version 2 (new)
 ```
 
 ### Step 6 — Deploy the updated version
 
 ```bash
-arch platform deployments create \
+agentcl platform deployments create \
   --label "v1.1 — staging" \
   --environment staging \
   --entry-agent-name hotel_coordinator \
@@ -688,7 +688,7 @@ Notice that only `hotel_search` incremented to version 2 — the coordinator and
 Once staging is verified:
 
 ```bash
-arch platform deployments create \
+agentcl platform deployments create \
   --label "v1.1 — production" \
   --environment production \
   --entry-agent-name hotel_coordinator \
@@ -699,10 +699,10 @@ arch platform deployments create \
 
 ```bash
 # List deployments to find the ID of the previous working version
-arch platform deployments list
+agentcl platform deployments list
 
 # Rollback
-arch platform deployments rollback \
+agentcl platform deployments rollback \
   --deployment-id dep-prev-id \
   --confirm
 ```
@@ -711,29 +711,29 @@ arch platform deployments rollback \
 
 ## Part 12: Debug a Session
 
-When something isn't working, use the `arch debug` commands to inspect what happened.
+When something isn't working, use the `agentcl debug` commands to inspect what happened.
 
 ```bash
 # Save a session ID to context so you don't repeat it
-arch context set-session --session-id sess-xyz789
+agentcl context set-session --session-id sess-xyz789
 
 # Check the current agent state
-arch debug get-current-state
+agentcl debug get-current-state
 
 # See what the agent did (execution trace)
-arch debug get-span-tree --flat
+agentcl debug get-span-tree --flat
 
 # Find errors
-arch debug get-errors --include-warnings
+agentcl debug get-errors --include-warnings
 
 # Search for a specific event
-arch debug traces --text "book_hotel" --limit 20
+agentcl debug traces --text "book_hotel" --limit 20
 
 # Run a full diagnostic
-arch debug diagnose --depth deep
+agentcl debug diagnose --depth deep
 
 # View the execution flow graph
-arch debug get-flow-graph --format mermaid
+agentcl debug get-flow-graph --format mermaid
 ```
 
 ---
@@ -744,10 +744,10 @@ Export the entire project as a portable archive:
 
 ```bash
 # Preview what will be exported
-arch platform import-export export-preview
+agentcl platform import-export export-preview
 
 # Export to a local directory
-arch platform import-export export --path ./backup/v1.1
+agentcl platform import-export export --path ./backup/v1.1
 
 # Commit the export to git
 git add backup/
@@ -758,13 +758,13 @@ git push origin main
 Import on a different workspace or platform instance:
 
 ```bash
-arch context set-project --project-id proj-new-workspace
+agentcl context set-project --project-id proj-new-workspace
 
 # Preview the import
-arch platform import-export import-preview --path ./backup/v1.1
+agentcl platform import-export import-preview --path ./backup/v1.1
 
 # Apply
-arch platform import-export import \
+agentcl platform import-export import \
   --path ./backup/v1.1 \
   --confirm
 ```
@@ -790,29 +790,29 @@ hotel-booking-agent/
 
 ---
 
-## Common `arch` Commands Cheatsheet
+## Common `agentcl` Commands Cheatsheet
 
 | Task | Command |
 |---|---|
-| Authenticate | `arch platform connect` |
-| Save default project | `arch context set-project --project-id <id>` |
-| Upload agent DSL | `arch platform agents save-dsl --agent-name <name> --dsl-content "$(cat file.abl)"` |
-| Validate package | `arch platform validate-package --path .` |
-| Create version | `arch platform versions create --agent-name <name> --changelog "..."` |
-| List versions | `arch platform versions list --agent-name <name>` |
-| Deploy | `arch platform deployments create --environment staging --entry-agent-name <name> --agent-version-manifest '{...}'` |
-| List deployments | `arch platform deployments list` |
-| Rollback | `arch platform deployments rollback --deployment-id <id> --confirm` |
-| Export project | `arch platform import-export export --path ./backup` |
-| Debug session | `arch debug diagnose --depth deep` |
-| View trace | `arch debug get-span-tree --flat` |
+| Authenticate | `agentcl platform connect` |
+| Save default project | `agentcl context set-project --project-id <id>` |
+| Upload agent DSL | `agentcl platform agents save-dsl --agent-name <name> --dsl-content "$(cat file.abl)"` |
+| Validate package | `agentcl platform validate-package --path .` |
+| Create version | `agentcl platform versions create --agent-name <name> --changelog "..."` |
+| List versions | `agentcl platform versions list --agent-name <name>` |
+| Deploy | `agentcl platform deployments create --environment staging --entry-agent-name <name> --agent-version-manifest '{...}'` |
+| List deployments | `agentcl platform deployments list` |
+| Rollback | `agentcl platform deployments rollback --deployment-id <id> --confirm` |
+| Export project | `agentcl platform import-export export --path ./backup` |
+| Debug session | `agentcl debug diagnose --depth deep` |
+| View trace | `agentcl debug get-span-tree --flat` |
 
 ---
 
 ## Next Steps
 
-- **Evaluations** — Run automated evals against your agents: `arch platform evals runs quick`
-- **LLM Config** — Tune model settings per agent: `arch platform config get-llm-config`
+- **Evaluations** — Run automated evals against your agents: `agentcl platform evals runs quick`
+- **LLM Config** — Tune model settings per agent: `agentcl platform config get-llm-config`
 - **Harness CI** — Integrate with Harness CI for automated deployments
 - **ABL Reference** — Full language reference at [docs.kore.ai/agent-platform/abl-reference](https://docs.kore.ai/agent-platform/abl-reference/language-overview)
 - **Orchestration Patterns** — Supervisor and adaptive network docs at [docs.kore.ai/agent-platform/ai-agents/supervisor](https://docs.kore.ai/agent-platform/ai-agents/supervisor/)
