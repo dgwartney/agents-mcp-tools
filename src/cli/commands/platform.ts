@@ -583,6 +583,15 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
           ...(tool.auth ? { auth: tool.auth } : {}),
         });
 
+        // Guard: a missing project ID means every API call will fail — surface this clearly
+        if (!projectId) {
+          return JSON.stringify({
+            success: false,
+            error: 'No project ID. Run `agentcl platform projects create --name "..." --save-context` or `agentcl context set-project --project-id <id>` first.',
+            hint: 'Check current context with: agentcl context show',
+          });
+        }
+
         const results: Record<string, unknown>[] = [];
         for (const tool of toolDefs) {
           try {
@@ -590,8 +599,13 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
             const result = existingId
               ? await platformTools({ action: 'update', projectId, toolId: existingId, name: tool.name, definition: definition(tool) }, ctx)
               : await platformTools({ action: 'create', projectId, name: tool.name, type: 'http', definition: definition(tool) }, ctx);
-            const parsed = JSON.parse(result) as { success?: boolean };
-            results.push({ name: tool.name, action: existingId ? 'updated' : 'created', success: parsed.success ?? false });
+            const parsed = JSON.parse(result) as { success?: boolean; error?: string };
+            results.push({
+              name: tool.name,
+              action: existingId ? 'updated' : 'created',
+              success: parsed.success ?? false,
+              ...(parsed.success === false && parsed.error ? { error: parsed.error } : {}),
+            });
           } catch (err) {
             results.push({ name: tool.name, success: false, error: err instanceof Error ? err.message : String(err) });
           }
