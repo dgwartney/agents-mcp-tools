@@ -6,15 +6,28 @@ The `arch` CLI gives you direct shell access to the Arch Agent Platform without 
 
 ## Installation
 
+The `arch` CLI is built from source and installed globally via `npm link`:
+
 ```bash
-npm install -g @koredotcom/agents-mcp-tools   # install globally
-arch --help                                    # verify
+git clone git@github.com:dgwartney/agents-mcp-tools.git
+cd agents-mcp-tools
+npm install
+npm run build
+npm link
 ```
 
-Or run without installing:
+`npm link` registers the compiled binary as a global command. Verify it works:
 
 ```bash
-npx @koredotcom/agents-mcp-tools arch --help
+arch --help
+```
+
+**To update** when the repo changes:
+
+```bash
+cd agents-mcp-tools
+git pull
+npm run build   # npm link only needs to run once
 ```
 
 ---

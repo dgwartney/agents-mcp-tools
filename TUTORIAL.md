@@ -32,28 +32,18 @@ Three agents work together:
 
 ## Part 1: Install the CLI
 
-**Option A — install from npm (recommended when published):**
-
-```bash
-npm install -g @koredotcom/agents-mcp-tools
-```
-
-**Option B — install from GitHub directly:**
-
-```bash
-npm install -g github:dgwartney/agents-mcp-tools
-```
-
-**Option C — build from source (always works):**
+The `arch` CLI is installed globally by building from source and using `npm link`:
 
 ```bash
 git clone git@github.com:dgwartney/agents-mcp-tools.git
 cd agents-mcp-tools
 npm install
 npm run build
-npm link        # makes `arch` available globally
-cd ..           # return to your working directory
+npm link
+cd ..           # return to your project directory
 ```
+
+`npm link` creates a global symlink from your system's bin directory to the compiled binary, making `arch` available in any shell without a path prefix.
 
 Verify it works:
 
@@ -72,6 +62,14 @@ Commands:
   platform   Manage Arch platform resources
   debug      Debug agent sessions and traces
   context    Manage saved CLI context (project ID, session ID)
+```
+
+**To update the CLI** after pulling new changes:
+
+```bash
+cd agents-mcp-tools
+git pull
+npm run build   # npm link only needs to run once
 ```
 
 ---
