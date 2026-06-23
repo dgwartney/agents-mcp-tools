@@ -114,7 +114,10 @@ async function runCli(args: string[]): Promise<void> {
 }
 
 describe('debug commands', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(process, 'exit').mockImplementation((() => {}) as never);
+  });
 
   test('debug list-agents passes domain filter', async () => {
     await runCli(['list-agents', '--domain', 'hotel-booking']);

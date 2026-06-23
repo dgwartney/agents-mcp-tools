@@ -35,6 +35,7 @@ function run(handler: () => Promise<string>): void {
     .then((result) => {
       printResult(result);
       exitOnFailure(result);
+      process.exit(0);
     })
     .catch((err: unknown) => {
       console.error(err instanceof Error ? err.message : String(err));

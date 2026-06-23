@@ -90,7 +90,10 @@ async function runCli(args: string[]): Promise<void> {
 }
 
 describe('platform commands', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(process, 'exit').mockImplementation((() => {}) as never);
+  });
 
   test('platform projects list calls platformProjects with action=list', async () => {
     await runCli(['projects', 'list']);
