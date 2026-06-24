@@ -200,6 +200,12 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
                 } catch { /* malformed JWT */ }
               }
             }
+            // Fetch workspace name so context show includes it
+            try {
+              const wsResult = await platformWorkspaces({ action: 'current' }, ctx);
+              const ws = JSON.parse(wsResult) as { success?: boolean; workspaceName?: string };
+              if (ws.success && ws.workspaceName) patch.workspaceName = ws.workspaceName;
+            } catch { /* best-effort — don't fail connect if name lookup fails */ }
             writeCliState(patch);
           }
         } catch { /* ignore parse errors */ }

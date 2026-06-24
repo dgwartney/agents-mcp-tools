@@ -10,6 +10,7 @@ import { basename, dirname } from 'node:path';
 import { buildCliContext } from '../context.js';
 import { writeCliState } from '../state.js';
 import { platformProjects } from '../../tools/platform-projects.js';
+import { platformWorkspaces } from '../../tools/platform-workspaces.js';
 
 // ── Template files ────────────────────────────────────────────────────────────
 // Exact, validated content from the hotel booking reference project.
@@ -698,6 +699,7 @@ async function runInit(withPlatform: boolean, bare: boolean): Promise<void> {
     // project is created in the same workspace the user is already authenticated to.
     const ctx = buildCliContext(serverUrl);
     let authTenantId: string | undefined;
+    let authWorkspaceName: string | undefined;
     try {
       const authResult = await ctx.authenticate();
       console.log(`  ✓  Authenticated (${authResult.method})`);
@@ -707,9 +709,16 @@ async function runInit(withPlatform: boolean, bare: boolean): Promise<void> {
         try {
           const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString()) as Record<string, unknown>;
           authTenantId = payload.tenantId as string | undefined;
-          if (authTenantId) console.log(`  ℹ  Workspace: ${authTenantId}`);
         } catch { /* ignore */ }
       }
+      // Fetch human-readable workspace name
+      try {
+        const wsResult = await platformWorkspaces({ action: 'current' }, ctx);
+        const ws = JSON.parse(wsResult) as { success?: boolean; workspaceName?: string };
+        if (ws.success && ws.workspaceName) authWorkspaceName = ws.workspaceName;
+      } catch { /* best-effort */ }
+      const wsLabel = authWorkspaceName ?? authTenantId;
+      if (wsLabel) console.log(`  ℹ  Workspace: ${wsLabel}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`  ✗  Authentication failed: ${msg}`);
@@ -726,7 +735,7 @@ async function runInit(withPlatform: boolean, bare: boolean): Promise<void> {
       const parsed = JSON.parse(result) as { project?: { id?: string } };
       const projectId = parsed.project?.id;
       if (projectId) {
-        writeCliState({ serverUrl, projectId });
+        writeCliState({ serverUrl, projectId, tenantId: authTenantId, workspaceName: authWorkspaceName });
         console.log(`  ✓  Project "${projectName}" created (${projectId})`);
         console.log(`  ✓  Saved to .arch/state.json`);
         execSync('git add .arch/ 2>/dev/null || true', { stdio: 'pipe' });
