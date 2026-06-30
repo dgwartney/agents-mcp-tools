@@ -4,6 +4,7 @@ import { homedir } from 'node:os';
 
 export interface CliState {
   projectId?: string;
+  projectName?: string;
   sessionId?: string;
   serverUrl?: string;
   tenantId?: string;

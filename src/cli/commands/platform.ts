@@ -1,9 +1,10 @@
 import { Command } from 'commander';
 import { readFileSync, existsSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
+import { promises as fsPromises } from 'node:fs';
+import { resolve, dirname, join } from 'node:path';
 import type { DebugContext } from '../../tools/index.js';
 import { printResult, exitOnFailure } from '../output.js';
-import { resolveProjectId, resolveSessionId, writeCliState } from '../state.js';
+import { resolveProjectId, resolveSessionId, writeCliState, readCliState } from '../state.js';
 
 import { connect } from '../../tools/connect.js';
 import { platformProjects } from '../../tools/platform-projects.js';
@@ -244,12 +245,13 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
 
         // Extract project ID from the response
         try {
-          const parsed = JSON.parse(result) as { success?: boolean; project?: { id?: string } };
+          const parsed = JSON.parse(result) as { success?: boolean; project?: { id?: string; name?: string } };
           const projectId = parsed.project?.id;
           if (parsed.success && projectId) {
             if (opts.saveContext) {
               // --save-context flag: save silently
-              writeCliState({ projectId });
+              const projectName = (parsed.project?.name ?? opts.name) as string | undefined;
+              writeCliState({ projectId, ...(projectName ? { projectName } : {}) });
               const enriched = { ...parsed, contextSaved: true, savedProjectId: projectId };
               return JSON.stringify(enriched, null, 2);
             } else {
@@ -706,11 +708,31 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
     .action(() => {
       const handler = async (): Promise<string> => {
         const result = await platformWorkspaces({ action: 'current' }, ctx);
-        // Save workspace info to context whenever it is resolved
+        // Save workspace info to context whenever it is resolved, and enrich with project context
         try {
           const parsed = JSON.parse(result) as { success?: boolean; tenantId?: string; workspaceName?: string };
           if (parsed.success && parsed.tenantId) {
             writeCliState({ tenantId: parsed.tenantId, workspaceName: parsed.workspaceName ?? undefined });
+          }
+          if (parsed.success) {
+            const state = readCliState();
+            let { projectName } = state;
+            // Backfill missing projectName by fetching from the platform
+            if (state.projectId && !projectName) {
+              try {
+                const proj = JSON.parse(
+                  await platformProjects({ action: 'get', projectId: state.projectId }, ctx),
+                ) as { success?: boolean; project?: { name?: string } };
+                projectName = proj.project?.name;
+                if (projectName) writeCliState({ projectName });
+              } catch { /* best-effort */ }
+            }
+            const enriched = {
+              ...parsed,
+              ...(state.projectId ? { projectId: state.projectId } : {}),
+              ...(projectName ? { projectName } : {}),
+            };
+            return JSON.stringify(enriched, null, 2);
           }
         } catch { /* ignore */ }
         return result;
@@ -750,10 +772,46 @@ export function registerPlatformCommands(program: Command, ctx: Ctx): void {
   importExport.command('export')
     .description('Export a project')
     .option('--project-id <id>', 'Project ID')
-    .option('--path <path>', 'Output path')
+    .option('--path <path>', 'Output directory path to write exported files')
     .action((opts) => {
       const projectId = resolveProjectId(opts.projectId) ?? '';
-      run(() => platformImportExport({ action: 'export', projectId, path: opts.path }, ctx));
+      const outputPath: string | undefined = opts.path;
+      const handler = async (): Promise<string> => {
+        const result = await platformImportExport({ action: 'export', projectId }, ctx);
+        if (!outputPath) {
+          return result;
+        }
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(result);
+        } catch {
+          return result;
+        }
+        const envelope = parsed as Record<string, unknown>;
+        if (!envelope.success) {
+          return result;
+        }
+        const data = envelope.data as Record<string, unknown> | undefined;
+        const files = data?.files as Record<string, string> | undefined;
+        if (!files || typeof files !== 'object') {
+          return result;
+        }
+        const outputDir = resolve(outputPath);
+        await fsPromises.mkdir(outputDir, { recursive: true });
+        for (const [relativePath, content] of Object.entries(files)) {
+          if (typeof content !== 'string') continue;
+          const dest = join(outputDir, relativePath);
+          await fsPromises.mkdir(dirname(dest), { recursive: true });
+          await fsPromises.writeFile(dest, content, 'utf8');
+        }
+        const fileCount = Object.keys(files).length;
+        const { files: _files, ...dataWithoutFiles } = (data ?? {}) as Record<string, unknown>;
+        return JSON.stringify({
+          success: true,
+          data: { ...dataWithoutFiles, writtenTo: outputDir, fileCount },
+        }, null, 2);
+      };
+      run(handler);
     });
 
   importExport.command('import-preview')

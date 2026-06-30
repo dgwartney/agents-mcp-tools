@@ -375,9 +375,9 @@ SUPERVISOR_FILES := $(sort $(wildcard agents/*.supervisor.abl))
 TOOLS_FILES      := $(sort $(wildcard tools/*.tools.abl))
 ALL_AGENT_FILES  := $(AGENT_FILES) $(SUPERVISOR_FILES)
 
-ENTRY_AGENT := $(shell \\
+ENTRY_AGENT := $(if $(SUPERVISOR_FILES),$(shell \\
   grep -hm1 '^SUPERVISOR:' $(SUPERVISOR_FILES) 2>/dev/null \\
-  | awk '{print $$2}' | tr -d '"' | head -1)
+  | awk '{print $$2}' | tr -d '"' | head -1))
 
 MANIFEST_JSON := $(shell \\
   printf '{'; \\
