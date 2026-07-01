@@ -9,6 +9,7 @@ import { registerPlatformCommands } from '../src/cli/commands/platform.js';
 import { registerDebugCommands } from '../src/cli/commands/debug.js';
 import { registerContextCommands } from '../src/cli/commands/context.js';
 import { registerInitCommand } from '../src/cli/commands/init.js';
+import { registerChatCommand } from '../src/cli/commands/chat.js';
 
 async function main(): Promise<void> {
   const program = new Command();
@@ -41,6 +42,10 @@ async function main(): Promise<void> {
 
   // init — scaffolds a new project in the current directory
   registerInitCommand(program);
+
+  // chat — interactive REPL session with an agent
+  const chat = program.command('chat').description('Start an interactive chat session with an agent');
+  registerChatCommand(chat, ctx);
 
   await program.parseAsync(process.argv);
 }
