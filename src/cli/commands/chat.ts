@@ -1,6 +1,7 @@
 // src/cli/commands/chat.ts
 import { createInterface } from 'node:readline';
 import { Command } from 'commander';
+import chalk from 'chalk';
 import type { DebugContext } from '../../tools/index.js';
 import { connect } from '../../tools/connect.js';
 import { loadAgent } from '../../tools/agents.js';
@@ -15,6 +16,10 @@ const HELP_TEXT = `
 
 const RESPONSE_TIMEOUT_MS = 60_000;
 
+const YOU_LABEL     = chalk.cyan.bold('You: ');
+const AGENT_LABEL   = chalk.green.bold('Agent: ');
+const THINKING_LINE = chalk.dim('Agent is thinking…');
+
 export function registerChatCommand(program: Command, ctx: DebugContext): void {
   program
     .option('--agent-path <path>', 'Agent path (format: domain/name) — starts a new session')
@@ -23,7 +28,7 @@ export function registerChatCommand(program: Command, ctx: DebugContext): void {
       // ── 1. Connect ──────────────────────────────────────────────────────────
       const connectResult = JSON.parse(await connect({}, ctx)) as { success: boolean; error?: string };
       if (!connectResult.success) {
-        console.error(connectResult.error ?? 'Failed to connect. Run: agentcl platform connect --server-url <url>');
+        console.error(chalk.red(connectResult.error ?? 'Failed to connect. Run: agentcl platform connect --server-url <url>'));
         process.exit(1);
       }
 
@@ -32,29 +37,27 @@ export function registerChatCommand(program: Command, ctx: DebugContext): void {
 
       if (opts.agentPath) {
         const projectId = resolveProjectId(opts.projectId) ?? '';
-        console.error(`Loading agent "${opts.agentPath}"…`);
+        console.error(chalk.dim(`Loading agent "${opts.agentPath}"…`));
         const loadResult = JSON.parse(
           await loadAgent({ agentPath: opts.agentPath, projectId }, ctx),
         ) as { success: boolean; sessionId?: string; agent?: { name: string }; error?: string };
 
         if (!loadResult.success || !loadResult.sessionId) {
-          console.error(loadResult.error ?? 'Failed to load agent.');
+          console.error(chalk.red(loadResult.error ?? 'Failed to load agent.'));
           process.exit(1);
         }
 
         sessionId = loadResult.sessionId;
         writeCliState({ sessionId });
-        console.error(`Agent "${loadResult.agent?.name ?? opts.agentPath}" ready. Session: ${sessionId}`);
+        console.error(chalk.dim(`Agent "${loadResult.agent?.name ?? opts.agentPath}" ready. Session: ${sessionId}`));
       } else {
         const persisted = resolveSessionId();
         if (!persisted) {
-          console.error(
-            'No active session. Start one with: agentcl chat --agent-path <domain/name>',
-          );
+          console.error(chalk.red('No active session. Start one with: agentcl chat --agent-path <domain/name>'));
           process.exit(1);
         }
         sessionId = persisted;
-        console.error(`Resuming session: ${sessionId}`);
+        console.error(chalk.dim(`Resuming session: ${sessionId}`));
       }
 
       // ── 3. Start REPL ───────────────────────────────────────────────────────
@@ -64,7 +67,7 @@ export function registerChatCommand(program: Command, ctx: DebugContext): void {
       let waitingForResponse = false;
 
       const prompt = () => {
-        if (!waitingForResponse) rl.question('You: ', onLine);
+        if (!waitingForResponse) rl.question(YOU_LABEL, onLine);
       };
 
       const clearSendTimeout = () => {
@@ -76,7 +79,7 @@ export function registerChatCommand(program: Command, ctx: DebugContext): void {
 
       // ── 4. Wire streaming handlers ──────────────────────────────────────────
       ctx.wsClient.onResponseStart = (_sid, _mid) => {
-        process.stdout.write('\nAgent: ');
+        process.stdout.write('\n' + AGENT_LABEL);
       };
 
       ctx.wsClient.onResponseChunk = (sid, _mid, chunk) => {
@@ -94,7 +97,7 @@ export function registerChatCommand(program: Command, ctx: DebugContext): void {
       ctx.wsClient.onError = (message) => {
         clearSendTimeout();
         waitingForResponse = false;
-        console.error(`\nError: ${message}`);
+        console.error('\n' + chalk.red(`Error: ${message}`));
         prompt();
       };
 
@@ -113,7 +116,7 @@ export function registerChatCommand(program: Command, ctx: DebugContext): void {
         }
 
         if (text === '/session') {
-          console.error(`Session ID: ${sessionId}`);
+          console.error(chalk.dim(`Session ID: ${sessionId}`));
           prompt();
           return;
         }
@@ -124,11 +127,13 @@ export function registerChatCommand(program: Command, ctx: DebugContext): void {
           return;
         }
 
-        // Send message to agent
+        // Send message — show thinking indicator while waiting for response_start
         waitingForResponse = true;
+        console.error(THINKING_LINE);
+
         sendTimeout = setTimeout(() => {
           waitingForResponse = false;
-          console.error('\nTimed out waiting for agent response.');
+          console.error('\n' + chalk.yellow('Timed out waiting for agent response.'));
           prompt();
         }, RESPONSE_TIMEOUT_MS);
 
