@@ -2,7 +2,7 @@
 import { Command } from 'commander';
 import type { DebugContext } from '../../tools/index.js';
 import { printResult, exitOnFailure } from '../output.js';
-import { resolveProjectId, resolveSessionId } from '../state.js';
+import { resolveProjectId, resolveSessionId, writeCliState } from '../state.js';
 
 import { listAgents } from '../../tools/agents.js';
 import { loadAgent } from '../../tools/agents.js';
@@ -59,7 +59,14 @@ export function registerDebugCommands(program: Command, ctx: Ctx): void {
     .option('--project-id <id>', 'Project ID')
     .action((opts) => {
       const projectId = resolveProjectId(opts.projectId) ?? '';
-      run(() => loadAgent({ agentPath: opts.agentPath, projectId }, ctx));
+      run(async () => {
+        const result = await loadAgent({ agentPath: opts.agentPath, projectId }, ctx);
+        const parsed = JSON.parse(result) as { success?: boolean; sessionId?: string };
+        if (parsed.success && parsed.sessionId) {
+          writeCliState({ sessionId: parsed.sessionId });
+        }
+        return result;
+      });
     });
 
   // ── send-message ──────────────────────────────────────────────────────────
