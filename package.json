@@ -1,9 +1,9 @@
 {
   "name": "@koredotcom/agents-mcp-tools",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Arch MCP tools for Kore.ai Agent Platform (build, evaluate, optimize, debug, analyze)",
   "type": "module",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "main": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",
   "bin": {
