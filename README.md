@@ -39,40 +39,22 @@ Existing configs that use an MCP server key like `agent-platform-debug` can keep
 
 ### `agentcl` CLI
 
-The `agentcl` binary is also available after `npm link`. See [TUTORIAL.md](TUTORIAL.md) for a full walkthrough and [USER-GUIDE.md](USER-GUIDE.md) for command reference.
+The `agentcl` binary is also available after `npm link`. See **[docs/agentcl/](docs/agentcl/)** for full documentation:
+
+| Document | Contents |
+|----------|----------|
+| [docs/agentcl/README.md](docs/agentcl/README.md) | Install, auth, environment URLs |
+| [docs/agentcl/QUICK-START.md](docs/agentcl/QUICK-START.md) | Zero to deployed in 5 minutes |
+| [docs/agentcl/USER-GUIDE.md](docs/agentcl/USER-GUIDE.md) | Full command reference |
+| [docs/agentcl/COMMANDS.md](docs/agentcl/COMMANDS.md) | Complete flat command/option reference |
+| [docs/agentcl/TUTORIAL.md](docs/agentcl/TUTORIAL.md) | Multi-part walkthrough |
+| [docs/agentcl/CHANGELOG.md](docs/agentcl/CHANGELOG.md) | Release history |
 
 ```bash
 agentcl --help
-agentcl platform connect
-agentcl platform projects list
+agentcl platform connect --server-url https://agents.kore.ai
+agentcl chat --agent-path default/supervisor   # interactive REPL
 ```
-
-**Start a new project** using the hotel booking multi-agent template:
-
-```bash
-mkdir my-agent-project && cd my-agent-project
-agentcl init             # scaffold files + git init
-agentcl init --platform  # also authenticate, create platform project, import tools
-```
-
-**Register HTTP tools** from a `.tools.abl` file into the Project Tool Library:
-
-```bash
-agentcl platform tools import-abl --file tools/my-api.tools.abl --dry-run  # preview
-agentcl platform tools import-abl --file tools/my-api.tools.abl             # apply (upsert)
-```
-
-### Environment URLs
-
-| Environment | URL                              |
-| ----------- | -------------------------------- |
-| Production  | `https://agents.kore.ai`         |
-| Dev         | `https://agents-dev.kore.ai`     |
-| Staging     | `https://agents-staging.kore.ai` |
-| QA          | `https://agents-qa.kore.ai`      |
-| Local       | `http://localhost:3112`          |
-
-Set `AGENTS_URL` in the `env` block, or pass `serverUrl` directly to `platform_connect`.
 
 ## Updating
 

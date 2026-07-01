@@ -112,6 +112,18 @@ Done — your multi-agent application is live on staging.
 
 ---
 
+## Step 6: Chat with Your Agent
+
+Test the deployed agent interactively from the CLI:
+
+```bash
+agentcl chat --agent-path default/hotel_coordinator
+```
+
+Responses stream in real-time. Type `/exit` to quit, `/session` to see the session ID.
+
+---
+
 ## What's Next
 
 **Update your Hotels API connection:**

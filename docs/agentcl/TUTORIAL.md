@@ -818,6 +818,50 @@ agentcl platform import-export import \
 
 ---
 
+## Part 14: Interactive Chat Testing
+
+Use `agentcl chat` to verify agent behavior directly from the terminal. It loads an agent, streams responses in real-time, and keeps the session open for multiple turns — the fastest way to test a change without Studio.
+
+```bash
+# Load a fresh session and start chatting
+agentcl chat --agent-path default/hotel_coordinator
+```
+
+```
+[Arch MCP] Using stored credentials
+Loading agent "default/hotel_coordinator"…
+Agent "hotel_coordinator" ready. Session: 6b193a2c-b986-40f7-8abf-ae7826d98b76
+You: I need to book a hotel in Paris
+Agent is thinking…
+
+Agent: I'd be happy to help you book a hotel in Paris! To find the best options,
+could you let me know your check-in and check-out dates?
+
+You: /session
+Session ID: 6b193a2c-b986-40f7-8abf-ae7826d98b76
+You: /exit
+```
+
+**Resume a session after exit:**
+
+```bash
+agentcl chat     # reads sessionId from .arch/state.json
+```
+
+> If the server-side session has expired, start a new one with `--agent-path`. Session expiry is server-side; the session ID in state remains until replaced.
+
+**Inspect a session while chatting** (from a second terminal):
+
+```bash
+agentcl debug get-current-state
+agentcl debug traces --limit 20
+agentcl debug get-flow-graph --format mermaid
+```
+
+**Debug commands no longer require a prior `platform connect`** — they auto-connect from stored credentials (`.arch/credentials.json`) on every invocation.
+
+---
+
 ## Complete Project Structure
 
 After following this tutorial, your repository looks like this:
@@ -860,6 +904,8 @@ hotel-booking-agent/
 | Export project | `agentcl platform import-export export --path ./backup` |
 | Debug session | `agentcl debug diagnose --depth deep` |
 | View trace | `agentcl debug get-span-tree --flat` |
+| Chat interactively | `agentcl chat --agent-path default/<name>` |
+| Resume last chat | `agentcl chat` |
 
 ---
 

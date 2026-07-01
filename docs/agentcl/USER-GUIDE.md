@@ -254,13 +254,44 @@ agentcl debug lint-abl --path ./my-agent-project
 
 ---
 
-## 8. Debugging Sessions
+## 8. Interactive Chat
+
+`agentcl chat` opens a readline REPL that loads an agent and lets you converse with it turn-by-turn — no need to juggle session IDs or run separate commands between messages.
+
+```bash
+# Start a new session
+agentcl chat --agent-path default/supervisor
+
+# Resume the last session (session ID read from .arch/state.json)
+agentcl chat
+```
+
+Output colors: `You:` in cyan, `Agent:` in green, status messages in dim gray. Responses stream chunk-by-chunk as they arrive.
+
+**REPL slash commands:** `/session` — print session ID | `/help` — show commands | `/exit` or `/quit` — end session.
+
+**Notes:**
+- Use `agentcl debug list-agents` to discover available `--agent-path` values.
+- Session ID is written to `.arch/state.json` on load for automatic resume.
+- Server-side session state may expire; if `agentcl chat` (no args) fails, start fresh with `--agent-path`.
+
+---
+
+## 9. Debugging Sessions
+
+> **Auto-connect:** All `debug` commands reconnect automatically from stored credentials. You no longer need to run `agentcl platform connect` before each debug command — once you've connected once in a directory, subsequent invocations work silently.
 
 ```bash
 # List active sessions on the server
 agentcl debug list-active-sessions
 
-# Save session to context
+# Load an agent — session ID written to .arch/state.json automatically
+agentcl debug load-agent --agent-path default/supervisor
+
+# Send a message — session ID resolved from state (no --session-id needed)
+agentcl debug send-message --text "Hello"
+
+# Save session manually if needed
 agentcl context set-session --session-id sess-xyz789
 
 # Get current agent state
@@ -366,6 +397,8 @@ agentcl debug get-errors && echo "No errors" || echo "Errors found"
 |---|---|
 | Start a new project | `agentcl init` (scaffolds hotel booking template + git) |
 | Start new project + platform setup | `agentcl init --platform` |
+| Chat interactively with an agent | `agentcl chat --agent-path default/supervisor` |
+| Resume last chat session | `agentcl chat` |
 | Check all available commands | `agentcl --help` |
 | Check options for a command | `agentcl platform projects --help` |
 | Register tools from a .tools.abl file | `agentcl platform tools import-abl --file tools/my-api.tools.abl` |
@@ -405,7 +438,9 @@ Both `.arch/` files are gitignored. Each project directory has its own set, enab
 | `agentcl platform connect` | `serverUrl`, `tenantId` (from JWT) |
 | `agentcl platform workspaces current` | `tenantId`, `workspaceName` |
 | `agentcl platform workspaces switch` | `tenantId`, `workspaceName` |
-| `agentcl platform projects create --save-context` | `projectId` |
+| `agentcl platform projects create --save-context` | `projectId`, `projectName` |
 | `agentcl context set-project` | `projectId` |
 | `agentcl context set-session` | `sessionId` |
 | `agentcl context set-workspace` | `tenantId`, `workspaceName` |
+| `agentcl debug load-agent` | `sessionId` |
+| `agentcl chat --agent-path <path>` | `sessionId` |

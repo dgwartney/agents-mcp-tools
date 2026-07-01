@@ -1082,6 +1082,73 @@ agentcl platform deployments retire --project-id <id> --deployment-id <id>
 
 ---
 
+## 19. `chat` — Interactive REPL
+
+### 19a. New session with --agent-path
+
+```bash
+agentcl chat --agent-path default/supervisor
+```
+
+**Expected:** "Loading agent…" in dim gray, then `You:` prompt in cyan. Type a message — "Agent is thinking…" appears, then `Agent:` in green followed by streaming response. `You:` prompt returns.
+
+---
+
+### 19b. REPL slash commands
+
+While in an active chat session type `/session` → session ID printed. Type `/help` → slash command list. Type `/exit` → clean exit, process exits 0.
+
+---
+
+### 19c. Resume session (no --agent-path)
+
+After 19a (session ID written to `.arch/state.json`):
+
+```bash
+agentcl chat
+```
+
+**Expected:** "Resuming session: <id>" then `You:` prompt.
+
+---
+
+### 19d. No active session
+
+```bash
+agentcl context clear
+agentcl chat
+```
+
+**Expected:** `No active session. Start one with: agentcl chat --agent-path <domain/name>` and exit code 1.
+
+---
+
+## 20. Debug Auto-Connect
+
+### 20a. load-agent auto-connects and persists session
+
+Without running `platform connect` first:
+
+```bash
+agentcl debug load-agent --agent-path default/supervisor
+```
+
+**Expected:** `[Arch MCP] Using stored credentials`, then `{"success":true,"sessionId":"..."}`. Verify `.arch/state.json` now contains `sessionId`.
+
+---
+
+### 20b. send-message uses persisted session
+
+After 20a:
+
+```bash
+agentcl debug send-message --text "Hello"
+```
+
+**Expected:** `[Arch MCP] Using stored credentials`, then `{"success":true,"response":"..."}`. No `--session-id` flag needed.
+
+---
+
 ## Quick Smoke Test Sequence
 
 Run these in order to exercise the most common workflow end-to-end:
@@ -1108,14 +1175,14 @@ agentcl platform versions create --agent-name hotel_search --changelog "smoke te
 # 7. List versions to confirm
 agentcl platform versions list --agent-name hotel_search
 
-# 8. Load the agent and start a debug session
-agentcl debug load-agent --agent-path hotel/hotel_search
+# 8. Load the agent and start a debug session (session ID saved to state automatically)
+agentcl debug load-agent --agent-path default/hotel_search
 
-# 9. Save session to context
-agentcl context set-session --session-id <session-id-from-step-8>
-
-# 10. Send a message
+# 9. Send a message (session ID resolved from state — no --session-id needed)
 agentcl debug send-message --text "Find hotels in Paris for next weekend"
+
+# 9b. Or use chat for interactive testing
+agentcl chat --agent-path default/hotel_search
 
 # 11. Check traces
 agentcl debug traces --limit 10
