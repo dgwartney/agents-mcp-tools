@@ -1,13 +1,14 @@
 {
   "name": "@koredotcom/agents-mcp-tools",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Arch MCP tools for Kore.ai Agent Platform (build, evaluate, optimize, debug, analyze)",
   "type": "module",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "main": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",
   "bin": {
-    "agents-mcp-tools": "./dist/bin/mcp-debug.js"
+    "agents-mcp-tools": "./dist/bin/mcp-debug.js",
+    "agentcl": "./dist/bin/agentcl.js"
   },
   "exports": {
     ".": {
@@ -43,10 +44,13 @@
     "test:fast": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "agentcl": "node dist/bin/agentcl.js",
     "prepublishOnly": "pnpm run clean && pnpm run build && pnpm run test"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
+    "chalk": "^5.6.2",
+    "commander": "^12.0.0",
     "ws": "^8.16.0",
     "zod": "^3.22.0"
   },

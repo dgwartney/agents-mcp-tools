@@ -3,7 +3,7 @@
  *
  * Implements the authentication cascade for Arch MCP tools:
  *   1. Explicit token (if provided)
- *   2. Stored credentials (~/.config/kore-platform/credentials)
+ *   2. Stored credentials (.arch/credentials.json in project directory, or global fallback)
  *   3. Device authorization flow (RFC 8628)
  *      - Auto-launches browser
  *      - Polls in a single call (no two-phase handshake)
@@ -151,6 +151,28 @@ async function tryStoredCredentials(
 }
 
 /**
+ * Rewrite the scheme and host of a URL to match baseUrl.
+ *
+ * Backends running behind a reverse proxy sometimes return internal hostnames
+ * (e.g. Docker/K8s service names like "abl-platform-prod-studio") in the
+ * device auth verification_uri. Since the CLI already reached the server via
+ * baseUrl, we replace the scheme+host so the browser opens a reachable URL.
+ *
+ * The path, query, and fragment are preserved unchanged.
+ */
+function rewriteHostToBase(url: string, baseUrl: string): string {
+  try {
+    const parsed = new URL(url);
+    const base = new URL(baseUrl);
+    parsed.protocol = base.protocol;
+    parsed.host = base.host;
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
+/**
  * Open a URL in the user's default browser.
  * Uses execFile (not exec) to avoid shell injection from server-provided URLs.
  * Best-effort — never throws.
@@ -234,12 +256,17 @@ async function deviceAuthFlow(
     interval: number;
   };
 
+  // The server may return an internal service hostname (e.g. a Docker/K8s service name)
+  // in verification_uri_complete. Rewrite the scheme+host to match the configured baseUrl
+  // so the browser opens a publicly reachable URL.
+  const verificationUrl = rewriteHostToBase(deviceAuth.verification_uri_complete, baseUrl);
+
   console.error(
-    `${ARCH_MCP_LOG_PREFIX} Device auth initiated. Opening browser: ${deviceAuth.verification_uri_complete}`,
+    `${ARCH_MCP_LOG_PREFIX} Device auth initiated. Opening browser: ${verificationUrl}`,
   );
 
   // 2. Auto-open browser
-  openBrowser(deviceAuth.verification_uri_complete);
+  openBrowser(verificationUrl);
 
   // 3. Poll for approval (blocks until approved or timeout)
   // Clamp server-provided expires_in to DEFAULT_POLL_TIMEOUT_MS to avoid unbounded waits
@@ -263,7 +290,7 @@ async function deviceAuthFlow(
 }
 
 /**
- * Persist auth token to ~/.config/kore-platform/credentials.json.
+ * Persist auth token to .arch/credentials.json in the current project directory.
  * Best-effort — failures are logged but do not break the auth flow.
  */
 async function persistTokenIfPossible(result: AuthResult, _baseUrl: string): Promise<void> {
@@ -285,7 +312,7 @@ async function persistTokenIfPossible(result: AuthResult, _baseUrl: string): Pro
       email: payload.email,
     });
     console.error(
-      `${ARCH_MCP_LOG_PREFIX} Credentials saved to ~/.config/kore-platform/credentials.json`,
+      `${ARCH_MCP_LOG_PREFIX} Credentials saved to .arch/credentials.json`,
     );
   } catch (err) {
     console.error(

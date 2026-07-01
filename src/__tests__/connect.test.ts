@@ -128,7 +128,7 @@ describe('connect tool', () => {
       expect(result.success).toBe(true);
       expect(result.status).toBe('connected');
       expect(ctx.wsClient.disconnect).toHaveBeenCalled();
-      expect(ctx.authenticate).toHaveBeenCalledWith({ authToken: 'fresh-jwt' });
+      expect(ctx.authenticate).toHaveBeenCalledWith({ authToken: 'fresh-jwt', deviceCode: undefined, skipStoredCredentials: true });
     });
   });
 
@@ -209,7 +209,7 @@ describe('connect tool', () => {
 
       await connect({ authToken: 'my-jwt' }, ctx);
 
-      expect(ctx.authenticate).toHaveBeenCalledWith({ authToken: 'my-jwt' });
+      expect(ctx.authenticate).toHaveBeenCalledWith({ authToken: 'my-jwt', deviceCode: undefined, skipStoredCredentials: false });
     });
 
     test('returns auth method on success', async () => {

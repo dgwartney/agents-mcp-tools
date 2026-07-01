@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // .tool_response.filePath' | grep -qE '^/Users/dgwartney/git/agents-mcp-tools/(src|bin)/.*\\.ts$' && cd /Users/dgwartney/git/agents-mcp-tools && npm run build 2>&1 || true",
+            "statusMessage": "Building TypeScript..."
+          }
+        ]
+      }
+    ]
+  }
+}

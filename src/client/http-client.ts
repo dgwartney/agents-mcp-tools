@@ -132,7 +132,8 @@ export class HttpClient {
       headers: this.getHeaders(),
     });
     if (!response.ok) {
-      throw new Error(`GET ${path} failed: ${response.status} ${response.statusText}`);
+      const detail = await response.text().catch(() => '');
+      throw new Error(`GET ${path} failed: ${response.status} ${response.statusText}${detail ? ` — ${detail}` : ''}`);
     }
     return response.json() as Promise<T>;
   }
@@ -149,7 +150,8 @@ export class HttpClient {
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
     if (!response.ok) {
-      throw new Error(`POST ${path} failed: ${response.status} ${response.statusText}`);
+      const detail = await response.text().catch(() => '');
+      throw new Error(`POST ${path} failed: ${response.status} ${response.statusText}${detail ? ` — ${detail}` : ''}`);
     }
     return response.json() as Promise<T>;
   }
@@ -166,7 +168,8 @@ export class HttpClient {
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
     if (!response.ok) {
-      throw new Error(`PUT ${path} failed: ${response.status} ${response.statusText}`);
+      const detail = await response.text().catch(() => '');
+      throw new Error(`PUT ${path} failed: ${response.status} ${response.statusText}${detail ? ` — ${detail}` : ''}`);
     }
     return response.json() as Promise<T>;
   }

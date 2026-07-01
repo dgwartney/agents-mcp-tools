@@ -4,12 +4,29 @@ Arch is the personified Agent Platform MCP operator for Build, Evaluate, Optimiz
 
 ## Install
 
+Build from source and link globally — the package is not published to the npm registry.
+
+```bash
+git clone git@github.com:dgwartney/agents-mcp-tools.git
+cd agents-mcp-tools
+npm install
+npm run build
+npm link
+```
+
+`npm link` registers both binaries as global commands:
+- **`agentcl`** — the direct CLI (see [CLI Usage](#arch-cli) below)
+- **`agents-mcp-tools`** — the MCP server for Claude Code and other MCP clients
+
+### MCP Server Configuration
+
+After running `npm link`, add this to your project's `.mcp.json` or `~/.claude/settings.json`:
+
 ```json
 {
   "mcpServers": {
     "arch-agent-platform": {
-      "command": "npx",
-      "args": ["@koredotcom/agents-mcp-tools"],
+      "command": "agents-mcp-tools",
       "env": {
         "AGENTS_URL": "https://agents.kore.ai"
       }
@@ -18,21 +35,44 @@ Arch is the personified Agent Platform MCP operator for Build, Evaluate, Optimiz
 }
 ```
 
-Add this to your project's `.mcp.json` or `~/.claude/settings.json`.
-
 Existing configs that use an MCP server key like `agent-platform-debug` can keep that key; the key is local client configuration.
 
-### Environment URLs
+### `agentcl` CLI
 
-| Environment | URL                              |
-| ----------- | -------------------------------- |
-| Production  | `https://agents.kore.ai`         |
-| Dev         | `https://agents-dev.kore.ai`     |
-| Staging     | `https://agents-staging.kore.ai` |
-| QA          | `https://agents-qa.kore.ai`      |
-| Local       | `http://localhost:3112`          |
+The `agentcl` binary is also available after `npm link`. See **[docs/agentcl/](docs/agentcl/)** for full documentation:
 
-Set `AGENTS_URL` in the `env` block, or pass `serverUrl` directly to `platform_connect`.
+| Document | Contents |
+|----------|----------|
+| [docs/agentcl/README.md](docs/agentcl/README.md) | Install, auth, environment URLs |
+| [docs/agentcl/QUICK-START.md](docs/agentcl/QUICK-START.md) | Zero to deployed in 5 minutes |
+| [docs/agentcl/USER-GUIDE.md](docs/agentcl/USER-GUIDE.md) | Full command reference |
+| [docs/agentcl/COMMANDS.md](docs/agentcl/COMMANDS.md) | Complete flat command/option reference |
+| [docs/agentcl/TUTORIAL.md](docs/agentcl/TUTORIAL.md) | Multi-part walkthrough |
+| [docs/agentcl/CHANGELOG.md](docs/agentcl/CHANGELOG.md) | Release history |
+
+```bash
+agentcl --help
+agentcl platform connect --server-url https://agents.kore.ai
+agentcl chat --agent-path default/supervisor   # interactive REPL
+```
+
+## Updating
+
+To pick up new changes from the repository:
+
+```bash
+cd agents-mcp-tools
+git pull
+npm run build
+```
+
+`npm link` only needs to run once. The global symlink points to the compiled output in `dist/` — rebuilding is all that's needed to update both `agentcl` and `agents-mcp-tools`.
+
+Verify the update took effect:
+
+```bash
+agentcl --version
+```
 
 ## Tools
 
@@ -46,7 +86,7 @@ Arch creates and changes platform projects, agents, tools, configuration, versio
 | `platform_agents`        | Manage agents (list, get, save_dsl)                      |
 | `platform_versions`      | Manage agent versions (list, create, get, promote, diff) |
 | `platform_deployments`   | Manage deployments (list, create, get, retire, rollback) |
-| `platform_tools`         | Manage tools (list, get, create, update, delete, test)   |
+| `platform_tools`         | Manage tools (list, get, create, update, delete, test, import-abl) |
 | `platform_import_export` | Import/export projects                                   |
 | `platform_config`        | Manage project and LLM configuration                     |
 | `platform_workspaces`    | List, switch, and inspect active workspaces              |
@@ -110,7 +150,7 @@ Arch explains documentation, diagnostics, and system health signals.
 Authentication is automatic when you call `platform_connect`:
 
 1. **Explicit token** — pass `authToken` parameter
-2. **Stored credentials** — reads `~/.config/kore-platform/credentials.json`
+2. **Stored credentials** — reads `.arch/credentials.json` (in project directory)
 3. **Device auth** — opens the browser and polls until approval completes in the same `platform_connect` call
 
 ## License

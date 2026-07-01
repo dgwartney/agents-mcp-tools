@@ -7,6 +7,7 @@
 
 import { z } from "zod";
 import type { DebugContext } from "./index.js";
+import { connect } from "./connect.js";
 import type { TraceEventWithId, SessionInfo } from "../types.js";
 import { ARCH_MCP_LOG_PREFIX } from "./persona.js";
 import { safeIsoTimestamp } from "../utils/trace-formatting.js";
@@ -49,10 +50,10 @@ export async function listActiveSessions(
   ctx: DebugContext,
 ): Promise<string> {
   if (!ctx.wsClient.isConnected()) {
-    return JSON.stringify({
-      success: false,
-      error: "Not connected to server. Call platform_connect first.",
-    });
+    const connectResult = JSON.parse(await connect({}, ctx)) as { success: boolean; error?: string };
+    if (!connectResult.success) {
+      return JSON.stringify({ success: false, error: connectResult.error ?? 'Not connected to server. Run: agentcl platform connect --server-url <url>' });
+    }
   }
 
   return new Promise((resolve) => {
@@ -110,10 +111,10 @@ async function subscribeSession(
   ctx: DebugContext,
 ): Promise<string> {
   if (!ctx.wsClient.isConnected()) {
-    return JSON.stringify({
-      success: false,
-      error: "Not connected to server. Call platform_connect first.",
-    });
+    const connectResult = JSON.parse(await connect({}, ctx)) as { success: boolean; error?: string };
+    if (!connectResult.success) {
+      return JSON.stringify({ success: false, error: connectResult.error ?? 'Not connected to server. Run: agentcl platform connect --server-url <url>' });
+    }
   }
 
   return new Promise((resolve) => {
@@ -208,10 +209,10 @@ async function unsubscribeSession(
   ctx: DebugContext,
 ): Promise<string> {
   if (!ctx.wsClient.isConnected()) {
-    return JSON.stringify({
-      success: false,
-      error: "Not connected to server. Call platform_connect first.",
-    });
+    const connectResult = JSON.parse(await connect({}, ctx)) as { success: boolean; error?: string };
+    if (!connectResult.success) {
+      return JSON.stringify({ success: false, error: connectResult.error ?? 'Not connected to server. Run: agentcl platform connect --server-url <url>' });
+    }
   }
 
   return new Promise((resolve) => {

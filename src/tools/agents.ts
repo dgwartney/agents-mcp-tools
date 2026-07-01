@@ -7,6 +7,7 @@
 
 import { z } from 'zod';
 import type { DebugContext } from './index.js';
+import { connect } from './connect.js';
 
 // =============================================================================
 // debug_list_agents
@@ -84,12 +85,15 @@ export type LoadAgentArgs = z.infer<typeof loadAgentSchema>;
 export async function loadAgent(args: LoadAgentArgs, ctx: DebugContext): Promise<string> {
   const { agentPath, projectId } = args;
 
-  // Ensure connected
+  // Auto-connect using stored credentials if not already connected
   if (!ctx.wsClient.isConnected()) {
-    return JSON.stringify({
-      success: false,
-      error: 'Not connected to server. Call platform_connect first.',
-    });
+    const connectResult = JSON.parse(await connect({}, ctx)) as { success: boolean; error?: string };
+    if (!connectResult.success) {
+      return JSON.stringify({
+        success: false,
+        error: connectResult.error ?? 'Not connected to server. Run: agentcl platform connect --server-url <url>',
+      });
+    }
   }
 
   return new Promise((resolve) => {

@@ -1,0 +1,689 @@
+#compdef agentcl
+# Zsh completion for agentcl — Arch Agent Platform CLI
+#
+# Installation (Homebrew — already in $fpath on macOS):
+#   cp completions/_agentcl $(brew --prefix)/share/zsh/site-functions/_agentcl
+#   rm -f ~/.zcompdump && compinit
+
+# ─── Shared option sets ───────────────────────────────────────────────────────
+
+_agentcl_opt_project=(
+  '--project-id[Project ID (resolved from .arch/state.json if not set)]: : '
+)
+
+_agentcl_opt_session=(
+  '--session-id[Session ID (resolved from .arch/state.json if not set)]: : '
+)
+
+_agentcl_opt_agent=(
+  '--agent-name[Agent name]: : '
+)
+
+_agentcl_opt_global=(
+  '--global[Write to global ~/.config/kore-platform/cli-state.json]'
+)
+
+_agentcl_opt_confirm=(
+  '--confirm[Confirm destructive operation]'
+)
+
+_agentcl_opt_trace=(
+  '--session-id[Session ID]: : '
+  '--project-id[Project ID]: : '
+  '--trace-limit[Max trace events to load]: : '
+)
+
+# ─── Top-level ────────────────────────────────────────────────────────────────
+
+_agentcl() {
+  local context state line
+  typeset -A opt_args
+
+  _arguments -C \
+    '(-h --help)'{-h,--help}'[display help]' \
+    '(-V --version)'{-V,--version}'[output version number]' \
+    '--server-url[Server URL (overrides AGENTS_URL env var)]: : ' \
+    '1: :_agentcl_cmds' \
+    '*:: :->subcmd'
+
+  case $state in
+    subcmd)
+      case $words[1] in
+        platform) _agentcl_platform ;;
+        debug)    _agentcl_debug ;;
+        context)  _agentcl_context ;;
+        init)     _arguments \
+                    '--platform[Also authenticate, create platform project, and import tools]' \
+                    '--bare[Scaffold directories and Makefile only — no .abl template files]' \
+                    '(-h --help)'{-h,--help}'[display help]' ;;
+      esac
+      ;;
+  esac
+}
+
+_agentcl_cmds() {
+  local cmds=(
+    'platform:Manage Arch platform resources'
+    'debug:Debug agent sessions and traces'
+    'context:Manage saved CLI context (project ID, session ID, workspace)'
+    'init:Initialise a new Arch Agent Platform project (hotel booking template)'
+    'help:Display help for a command'
+  )
+  _describe 'command' cmds
+}
+
+# ─── platform ─────────────────────────────────────────────────────────────────
+
+_agentcl_platform() {
+  local context state line
+  typeset -A opt_args
+
+  _arguments -C \
+    '1: :_agentcl_platform_cmds' \
+    '*:: :->subcmd'
+
+  case $state in
+    subcmd)
+      case $words[1] in
+        connect)          _agentcl_platform_connect ;;
+        projects)         _agentcl_platform_projects ;;
+        agents)           _agentcl_platform_agents ;;
+        versions)         _agentcl_platform_versions ;;
+        deployments)      _agentcl_platform_deployments ;;
+        tools)            _agentcl_platform_tools ;;
+        config)           _agentcl_platform_config ;;
+        workspaces)       _agentcl_platform_workspaces ;;
+        import-export)    _agentcl_platform_import_export ;;
+        validate-package) _agentcl_platform_validate_package ;;
+        package-model)    _agentcl_platform_package_model ;;
+        evals)            _agentcl_platform_evals ;;
+      esac
+      ;;
+  esac
+}
+
+_agentcl_platform_cmds() {
+  local cmds=(
+    'connect:Connect to the Arch platform and authenticate'
+    'projects:Manage projects'
+    'agents:Manage agents within a project'
+    'versions:Manage agent versions'
+    'deployments:Manage deployments'
+    'tools:Manage platform tools'
+    'config:Manage project configuration'
+    'workspaces:Manage workspaces (tenants)'
+    'import-export:Import and export projects'
+    'validate-package:Validate a local ABL project package'
+    'package-model:Show compiler model for a local package'
+    'evals:Manage evaluations'
+  )
+  _describe 'platform command' cmds
+}
+
+_agentcl_platform_connect() {
+  _arguments \
+    '--server-url[Server URL]: : ' \
+    '--auth-token[Explicit JWT token]: : ' \
+    '--force[Force disconnect and reconnect — clears stored credentials]' \
+    '--device-code[Device code from prior auth initiation]: : ' \
+    '(-h --help)'{-h,--help}'[display help]'
+}
+
+_agentcl_platform_projects() {
+  local context state line
+  typeset -A opt_args
+
+  _arguments -C \
+    '1: :_agentcl_platform_projects_cmds' \
+    '*:: :->subcmd'
+
+  case $state in
+    subcmd)
+      case $words[1] in
+        list)   _arguments '(-h --help)'{-h,--help}'[display help]' ;;
+        get)    _arguments $(_agentcl_expand _agentcl_opt_project) '(-h --help)'{-h,--help}'[display help]' ;;
+        create) _agentcl_platform_projects_create ;;
+        update) _agentcl_platform_projects_update ;;
+        delete) _arguments $(_agentcl_expand _agentcl_opt_project) '--confirm[Confirm destructive operation]' '(-h --help)'{-h,--help}'[display help]' ;;
+      esac
+      ;;
+  esac
+}
+
+# Helper: expand a named option array
+_agentcl_expand() {
+  local arr="$1[@]"
+  echo "${(P)arr}"
+}
+
+_agentcl_platform_projects_cmds() {
+  local cmds=(
+    'list:List all projects'
+    'get:Get a project by ID'
+    'create:Create a new project'
+    'update:Update a project'
+    'delete:Delete a project'
+  )
+  _describe 'projects command' cmds
+}
+
+_agentcl_platform_projects_create() {
+  _arguments \
+    '--name[Project name]: : ' \
+    '--description[Project description]: : ' \
+    '--save-context[Save new project ID to .arch/state.json]' \
+    '(-h --help)'{-h,--help}'[display help]'
+}
+
+_agentcl_platform_projects_update() {
+  _arguments \
+    '--project-id[Project ID]: : ' \
+    '--name[New project name]: : ' \
+    '--description[New description]: : ' \
+    '--entry-agent-name[Entry agent name (use "" to clear)]: : ' \
+    '(-h --help)'{-h,--help}'[display help]'
+}
+
+_agentcl_platform_agents() {
+  local context state line
+
+  _arguments -C \
+    '1: :_agentcl_platform_agents_cmds' \
+    '*:: :->subcmd'
+
+  case $state in
+    subcmd)
+      case $words[1] in
+        list)     _arguments '--project-id[Project ID]: : ' '(-h --help)'{-h,--help}'[display help]' ;;
+        get)      _arguments '--project-id[Project ID]: : ' '--agent-name[Agent name]: : ' '(-h --help)'{-h,--help}'[display help]' ;;
+        save-dsl) _arguments '--project-id[Project ID]: : ' '--agent-name[Agent name (inferred from DSL if omitted)]: : ' '--file[Path to .abl file (resolves tool imports)]:file:_files -g "*.abl"' '--dsl-content[Raw DSL string (no import resolution)]: : ' '(-h --help)'{-h,--help}'[display help]' ;;
+      esac
+      ;;
+  esac
+}
+
+_agentcl_platform_agents_cmds() {
+  local cmds=(
+    'list:List agents in the project'
+    'get:Get agent details including DSL'
+    'save-dsl:Upload agent DSL — use --file to resolve tool imports (upserts; name inferred from AGENT:)'
+  )
+  _describe 'agents command' cmds
+}
+
+_agentcl_platform_versions() {
+  local context state line
+
+  _arguments -C \
+    '1: :_agentcl_platform_versions_cmds' \
+    '*:: :->subcmd'
+
+  case $state in
+    subcmd)
+      case $words[1] in
+        list)    _arguments '--project-id[Project ID]: : ' '--agent-name[Agent name]: : ' '(-h --help)'{-h,--help}'[display help]' ;;
+        create)  _arguments '--project-id[Project ID]: : ' '--agent-name[Agent name]: : ' '--changelog[Changelog text]: : ' '(-h --help)'{-h,--help}'[display help]' ;;
+        get)     _arguments '--project-id[Project ID]: : ' '--agent-name[Agent name]: : ' '--version[Version number]: : ' '(-h --help)'{-h,--help}'[display help]' ;;
+        promote) _arguments '--project-id[Project ID]: : ' '--agent-name[Agent name]: : ' '--version[Version number]: : ' '--status[New status]: :(draft review production deprecated)' '(-h --help)'{-h,--help}'[display help]' ;;
+        diff)    _arguments '--project-id[Project ID]: : ' '--agent-name[Agent name]: : ' '--version[Version number]: : ' '--other-version[Other version number]: : ' '(-h --help)'{-h,--help}'[display help]' ;;
+      esac
+      ;;
+  esac
+}
+
+_agentcl_platform_versions_cmds() {
+  local cmds=(
+    'list:List all versions for an agent'
+    'create:Create a new version'
+    'get:Get a specific version'
+    'promote:Change version status'
+    'diff:Diff two versions'
+  )
+  _describe 'versions command' cmds
+}
+
+_agentcl_platform_deployments() {
+  local context state line
+
+  _arguments -C \
+    '1: :_agentcl_platform_deployments_cmds' \
+    '*:: :->subcmd'
+
+  case $state in
+    subcmd)
+      case $words[1] in
+        list)     _arguments '--project-id[Project ID]: : ' '(-h --help)'{-h,--help}'[display help]' ;;
+        create)   _agentcl_platform_deployments_create ;;
+        get)      _arguments '--project-id[Project ID]: : ' '--deployment-id[Deployment ID]: : ' '(-h --help)'{-h,--help}'[display help]' ;;
+        retire)   _arguments '--project-id[Project ID]: : ' '--deployment-id[Deployment ID]: : ' '--confirm[Confirm]' '(-h --help)'{-h,--help}'[display help]' ;;
+        rollback) _arguments '--project-id[Project ID]: : ' '--deployment-id[Deployment ID]: : ' '--confirm[Confirm]' '(-h --help)'{-h,--help}'[display help]' ;;
+      esac
+      ;;
+  esac
+}
+
+_agentcl_platform_deployments_cmds() {
+  local cmds=(
+    'list:List deployments'
+    'create:Create a deployment'
+    'get:Get deployment details'
+    'retire:Retire a deployment'
+    'rollback:Rollback a deployment'
+  )
+  _describe 'deployments command' cmds
+}
+
+_agentcl_platform_deployments_create() {
+  _arguments \
+    '--project-id[Project ID]: : ' \
+    '--label[Deployment label]: : ' \
+    '--environment[Target environment]: :(draft staging production)' \
+    '--entry-agent-name[Entry agent name]: : ' \
+    '--agent-version-manifest[Agent version manifest (JSON)]: : ' \
+    '(-h --help)'{-h,--help}'[display help]'
+}
+
+_agentcl_platform_tools() {
+  local context state line
+
+  _arguments -C \
+    '1: :_agentcl_platform_tools_cmds' \
+    '*:: :->subcmd'
+
+  case $state in
+    subcmd)
+      case $words[1] in
+        list)   _arguments '--project-id[Project ID]: : ' '(-h --help)'{-h,--help}'[display help]' ;;
+        get)    _arguments '--project-id[Project ID]: : ' '--tool-id[Tool ID]: : ' '(-h --help)'{-h,--help}'[display help]' ;;
+        create) _arguments '--project-id[Project ID]: : ' '--name[Tool name]: : ' '--type[Tool type]: : ' '--definition[Tool definition (JSON)]: : ' '(-h --help)'{-h,--help}'[display help]' ;;
+        update) _arguments '--project-id[Project ID]: : ' '--tool-id[Tool ID]: : ' '--name[New name]: : ' '--definition[New definition (JSON)]: : ' '(-h --help)'{-h,--help}'[display help]' ;;
+        delete) _arguments '--project-id[Project ID]: : ' '--tool-id[Tool ID]: : ' '--confirm[Confirm]' '(-h --help)'{-h,--help}'[display help]' ;;
+        test)   _arguments '--project-id[Project ID]: : ' '--tool-id[Tool ID]: : ' '(-h --help)'{-h,--help}'[display help]' ;;
+      esac
+      ;;
+  esac
+}
+
+_agentcl_platform_tools_cmds() {
+  local cmds=(
+    'list:List all tools'
+    'get:Get tool details'
+    'create:Create a new tool'
+    'update:Update a tool'
+    'delete:Delete a tool'
+    'test:Test a tool'
+  )
+  _describe 'tools command' cmds
+}
+
+_agentcl_platform_config() {
+  local context state line
+
+  _arguments -C \
+    '1: :_agentcl_platform_config_cmds' \
+    '*:: :->subcmd'
+
+  case $state in
+    subcmd)
+      case $words[1] in
+        get-settings)      _arguments '--project-id[Project ID]: : ' '(-h --help)'{-h,--help}'[display help]' ;;
+        update-settings)   _arguments '--project-id[Project ID]: : ' '--settings[Settings object (JSON)]: : ' '(-h --help)'{-h,--help}'[display help]' ;;
+        get-llm-config)    _arguments '--project-id[Project ID]: : ' '(-h --help)'{-h,--help}'[display help]' ;;
+        update-llm-config) _arguments '--project-id[Project ID]: : ' '--settings[LLM config object (JSON)]: : ' '(-h --help)'{-h,--help}'[display help]' ;;
+      esac
+      ;;
+  esac
+}
+
+_agentcl_platform_config_cmds() {
+  local cmds=(
+    'get-settings:Get project settings'
+    'update-settings:Update project settings'
+    'get-llm-config:Get LLM configuration'
+    'update-llm-config:Update LLM configuration'
+  )
+  _describe 'config command' cmds
+}
+
+_agentcl_platform_workspaces() {
+  local context state line
+
+  _arguments -C \
+    '1: :_agentcl_platform_workspaces_cmds' \
+    '*:: :->subcmd'
+
+  case $state in
+    subcmd)
+      case $words[1] in
+        list)    _arguments '(-h --help)'{-h,--help}'[display help]' ;;
+        current) _arguments '(-h --help)'{-h,--help}'[display help]' ;;
+        switch)  _arguments '--tenant-id[Tenant ID]: : ' '(-h --help)'{-h,--help}'[display help]' ;;
+      esac
+      ;;
+  esac
+}
+
+_agentcl_platform_workspaces_cmds() {
+  local cmds=(
+    'list:List all workspaces'
+    'current:Show current workspace (saves to context)'
+    'switch:Switch to a different workspace'
+  )
+  _describe 'workspaces command' cmds
+}
+
+_agentcl_platform_import_export() {
+  local context state line
+
+  _arguments -C \
+    '1: :_agentcl_platform_import_export_cmds' \
+    '*:: :->subcmd'
+
+  case $state in
+    subcmd)
+      case $words[1] in
+        export-preview) _arguments '--project-id[Project ID]: : ' '(-h --help)'{-h,--help}'[display help]' ;;
+        export)         _arguments '--project-id[Project ID]: : ' '--path[Output path]:path:_files -/' '(-h --help)'{-h,--help}'[display help]' ;;
+        import-preview) _arguments '--project-id[Project ID]: : ' '--path[Input path]:path:_files -/' '(-h --help)'{-h,--help}'[display help]' ;;
+        import)         _agentcl_platform_import_export_import ;;
+      esac
+      ;;
+  esac
+}
+
+_agentcl_platform_import_export_cmds() {
+  local cmds=(
+    'export-preview:Preview what will be exported'
+    'export:Export project to a directory'
+    'import-preview:Dry-run import (preview only)'
+    'import:Apply an import'
+  )
+  _describe 'import-export command' cmds
+}
+
+_agentcl_platform_import_export_import() {
+  _arguments \
+    '--project-id[Project ID]: : ' \
+    '--path[Input directory or .zip path]:path:_files' \
+    '--confirm[Confirm import]' \
+    '--preview-digest[Preview digest]: : ' \
+    '--data[Import data (JSON)]: : ' \
+    '(-h --help)'{-h,--help}'[display help]'
+}
+
+_agentcl_platform_validate_package() {
+  _arguments \
+    '--path[Local folder or .zip path]:path:_files' \
+    '--project-id[Project ID]: : ' \
+    '(-h --help)'{-h,--help}'[display help]'
+}
+
+_agentcl_platform_package_model() {
+  _arguments \
+    '--path[Local folder or .zip path]:path:_files' \
+    '--project-id[Project ID]: : ' \
+    '(-h --help)'{-h,--help}'[display help]'
+}
+
+_agentcl_platform_evals() {
+  local context state line
+
+  _arguments -C \
+    '1: :_agentcl_platform_evals_cmds' \
+    '*:: :->subcmd'
+
+  case $state in
+    subcmd)
+      case $words[1] in
+        personas)   _agentcl_platform_evals_resource 'persona-id' 'list get create update delete templates generate' ;;
+        scenarios)  _agentcl_platform_evals_resource 'scenario-id' 'list get create update delete generate' ;;
+        evaluators) _agentcl_platform_evals_resource 'evaluator-id' 'list get create update delete templates' ;;
+        sets)       _agentcl_platform_evals_resource 'set-id' 'list get create update delete' ;;
+        runs)       _agentcl_platform_evals_runs ;;
+      esac
+      ;;
+  esac
+}
+
+_agentcl_platform_evals_cmds() {
+  local cmds=(
+    'personas:Manage eval personas'
+    'scenarios:Manage eval scenarios'
+    'evaluators:Manage eval evaluators'
+    'sets:Manage eval sets'
+    'runs:Manage eval runs'
+  )
+  _describe 'evals command' cmds
+}
+
+_agentcl_platform_evals_resource() {
+  local idflag="$1"
+  local actions=("${(@s: :)2}")
+  local context state line
+
+  _arguments -C \
+    "1: :(${actions})" \
+    '*:: :->subcmd'
+
+  case $state in
+    subcmd)
+      _arguments \
+        '--project-id[Project ID]: : ' \
+        "--${idflag}[Resource ID]: : " \
+        '--body[Request body (JSON)]: : ' \
+        '--confirm[Confirm destructive operation]' \
+        '(-h --help)'{-h,--help}'[display help]'
+      ;;
+  esac
+}
+
+_agentcl_platform_evals_runs() {
+  local context state line
+  local run_actions=(list get create update start cancel status heatmap cases compare preflight quick)
+
+  _arguments -C \
+    "1: :(${run_actions})" \
+    '*:: :->subcmd'
+
+  case $state in
+    subcmd)
+      _arguments \
+        '--project-id[Project ID]: : ' \
+        '--run-id[Run ID]: : ' \
+        '--run-ids[Comma-separated run IDs for compare]: : ' \
+        '--body[Request body (JSON)]: : ' \
+        '(-h --help)'{-h,--help}'[display help]'
+      ;;
+  esac
+}
+
+# ─── debug ────────────────────────────────────────────────────────────────────
+
+_agentcl_debug() {
+  local context state line
+
+  _arguments -C \
+    '1: :_agentcl_debug_cmds' \
+    '*:: :->subcmd'
+
+  case $state in
+    subcmd)
+      case $words[1] in
+        list-agents)           _arguments '--domain[Filter by domain]: : ' '(-h --help)'{-h,--help}'[display help]' ;;
+        load-agent)            _arguments '--agent-path[Agent path (domain/name)]: : ' '--project-id[Project ID]: : ' '(-h --help)'{-h,--help}'[display help]' ;;
+        send-message)          _agentcl_debug_send_message ;;
+        traces)                _agentcl_debug_traces ;;
+        get-current-state)     _arguments '--session-id[Session ID]: : ' '--project-id[Project ID]: : ' '(-h --help)'{-h,--help}'[display help]' ;;
+        get-span-tree)         _arguments '--session-id[Session ID]: : ' '--project-id[Project ID]: : ' '--flat[Return flat list with depth info]' '(-h --help)'{-h,--help}'[display help]' ;;
+        get-errors)            _arguments '--session-id[Session ID]: : ' '--project-id[Project ID]: : ' '--include-warnings[Include warnings]' '(-h --help)'{-h,--help}'[display help]' ;;
+        explain-decision)      _agentcl_debug_explain_decision ;;
+        get-flow-graph)        _agentcl_debug_get_flow_graph ;;
+        list-active-sessions)  _arguments '(-h --help)'{-h,--help}'[display help]' ;;
+        session)               _agentcl_debug_session ;;
+        docs)                  _arguments '--topic[Topic name]: : ' '--query[Search query]: : ' '(-h --help)'{-h,--help}'[display help]' ;;
+        analyze-session)       _arguments '--session-id[Session ID]: : ' '--project-id[Project ID]: : ' '(-h --help)'{-h,--help}'[display help]' ;;
+        diagnostic-layer)      _arguments '--session-id[Session ID]: : ' '--project-id[Project ID]: : ' '--trace-limit[Max trace events]: : ' '(-h --help)'{-h,--help}'[display help]' ;;
+        get-trace-event)       _agentcl_debug_get_trace_event ;;
+        explain-trace-event)   _arguments '--event-id[Event ID]: : ' '--session-id[Session ID]: : ' '--project-id[Project ID]: : ' '--trace-limit[Max trace events]: : ' '(-h --help)'{-h,--help}'[display help]' ;;
+        model-interactions)    _arguments '--session-id[Session ID]: : ' '--project-id[Project ID]: : ' '--trace-limit[Max trace events]: : ' '--include-timeline[Include timeline]' '(-h --help)'{-h,--help}'[display help]' ;;
+        realtime-interactions) _arguments '--session-id[Session ID]: : ' '--project-id[Project ID]: : ' '--trace-limit[Max trace events]: : ' '--include-timeline[Include timeline]' '(-h --help)'{-h,--help}'[display help]' ;;
+        harness-logs)          _agentcl_debug_harness_logs ;;
+        diagnose)              _agentcl_debug_diagnose ;;
+        lint-abl)              _arguments '--path[Local folder or .zip path]:path:_files' '(-h --help)'{-h,--help}'[display help]' ;;
+        why-transcript-failed) _arguments '--path[Package folder or .zip path]:path:_files' '--transcript-path[Transcript JSON path]:path:_files' '(-h --help)'{-h,--help}'[display help]' ;;
+      esac
+      ;;
+  esac
+}
+
+_agentcl_debug_cmds() {
+  local cmds=(
+    'list-agents:List available agents'
+    'load-agent:Load an agent and create a debug session'
+    'send-message:Send a message to the loaded agent'
+    'traces:Get and search trace events'
+    'get-current-state:Get current agent state'
+    'get-span-tree:Get hierarchical span tree'
+    'get-errors:Get errors and warnings'
+    'explain-decision:Explain a decision event'
+    'get-flow-graph:Get execution graph'
+    'list-active-sessions:List active sessions on the server'
+    'session:Subscribe/unsubscribe from session events'
+    'docs:Get or search ABL documentation'
+    'analyze-session:Automated session analysis'
+    'diagnostic-layer:Build layered causal diagnostic view'
+    'get-trace-event:Fetch one trace event by ID'
+    'explain-trace-event:Explain one trace event'
+    'model-interactions:Summarize model-provider interactions'
+    'realtime-interactions:Summarize realtime voice interactions'
+    'harness-logs:Download Harness CI execution logs'
+    'diagnose:Run diagnostic analysis'
+    'lint-abl:Run ABL lint checks'
+    'why-transcript-failed:Correlate transcript failures with ABL diagnoses'
+  )
+  _describe 'debug command' cmds
+}
+
+_agentcl_debug_send_message() {
+  _arguments \
+    '--text[Message text]: : ' \
+    '--session-id[Session ID]: : ' \
+    '--no-wait[Do not wait for agent response]' \
+    '--timeout[Timeout in milliseconds]: : ' \
+    '(-h --help)'{-h,--help}'[display help]'
+}
+
+_agentcl_debug_traces() {
+  _arguments \
+    '--text[Text filter]: : ' \
+    '--types[Comma-separated event types]: : ' \
+    '--agent-name[Agent name filter]: : ' \
+    '--has-error[Filter to error events]' \
+    '--session-id[Session ID]: : ' \
+    '--project-id[Project ID]: : ' \
+    '--limit[Max events]: : ' \
+    '(-h --help)'{-h,--help}'[display help]'
+}
+
+_agentcl_debug_explain_decision() {
+  _arguments \
+    '--event-id[Event ID]: : ' \
+    '--session-id[Session ID]: : ' \
+    '--project-id[Project ID]: : ' \
+    '--last-n[Number of recent events]: : ' \
+    '--turn[Turn number]: : ' \
+    '--type[Event type]: : ' \
+    '(-h --help)'{-h,--help}'[display help]'
+}
+
+_agentcl_debug_get_flow_graph() {
+  _arguments \
+    '--session-id[Session ID]: : ' \
+    '--project-id[Project ID]: : ' \
+    '--format[Output format]: :(json mermaid)' \
+    '--include-app-graph[Include application graph]' \
+    '(-h --help)'{-h,--help}'[display help]'
+}
+
+_agentcl_debug_session() {
+  local context state line
+
+  _arguments -C \
+    '1: :(subscribe unsubscribe)' \
+    '*:: :->subcmd'
+
+  case $state in
+    subcmd) _arguments '--session-id[Session ID]: : ' '(-h --help)'{-h,--help}'[display help]' ;;
+  esac
+}
+
+_agentcl_debug_get_trace_event() {
+  _arguments \
+    '--event-id[Event ID]: : ' \
+    '--session-id[Session ID]: : ' \
+    '--project-id[Project ID]: : ' \
+    '--trace-limit[Max trace events]: : ' \
+    '--include-data[Include raw data]' \
+    '--include-nearby[Include nearby events]' \
+    '(-h --help)'{-h,--help}'[display help]'
+}
+
+_agentcl_debug_harness_logs() {
+  _arguments \
+    '--execution-id[Harness execution ID]: : ' \
+    '--run-sequence[Run sequence number]: : ' \
+    '--stage-id[Stage identifier]: : ' \
+    '--step-id[Step identifier]: : ' \
+    '--pipeline-id[Pipeline ID]: : ' \
+    '--filter[Regex filter for log lines]: : ' \
+    '--tail[Last N lines]: : ' \
+    '(-h --help)'{-h,--help}'[display help]'
+}
+
+_agentcl_debug_diagnose() {
+  _arguments \
+    '--session-id[Session ID]: : ' \
+    '--agent-name[Agent name]: : ' \
+    '--project-id[Project ID]: : ' \
+    '--depth[Analysis depth]: :(quick standard deep)' \
+    '--config-only[Only inspect config]' \
+    '(-h --help)'{-h,--help}'[display help]'
+}
+
+# ─── context ──────────────────────────────────────────────────────────────────
+
+_agentcl_context() {
+  local context state line
+
+  _arguments -C \
+    '1: :_agentcl_context_cmds' \
+    '*:: :->subcmd'
+
+  case $state in
+    subcmd)
+      case $words[1] in
+        show)          _arguments '--global[Show global state file]' '(-h --help)'{-h,--help}'[display help]' ;;
+        set-project)   _arguments '--project-id[Project ID to save]: : ' '--global[Write to global state]' '(-h --help)'{-h,--help}'[display help]' ;;
+        set-session)   _arguments '--session-id[Session ID to save]: : ' '--global[Write to global state]' '(-h --help)'{-h,--help}'[display help]' ;;
+        set-workspace) _arguments '--tenant-id[Tenant ID to save]: : ' '--workspace-name[Workspace display name]: : ' '--global[Write to global state]' '(-h --help)'{-h,--help}'[display help]' ;;
+        clear)         _arguments '--global[Clear global state file]' '(-h --help)'{-h,--help}'[display help]' ;;
+      esac
+      ;;
+  esac
+}
+
+_agentcl_context_cmds() {
+  local cmds=(
+    'show:Display active state file path and saved values'
+    'set-project:Save a default project ID'
+    'set-session:Save a default session ID'
+    'set-workspace:Save a default workspace (tenant)'
+    'clear:Clear all saved context'
+  )
+  _describe 'context command' cmds
+}
+
+# ─── Register and invoke ──────────────────────────────────────────────────────
+
+compdef _agentcl agentcl
+_agentcl "$@"
